@@ -26,7 +26,7 @@ func (v VideoInfo) String() string {
 	return fmt.Sprintf("VideoInfo: %s %s %s %s", v.Title, v.ViewKey, v.upTime.Format("2006-01-02 15:04:05"), v.dlAddr)
 }
 
-func (v *VideoInfo) updateDlAddr() (err error) {
+func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
 
 	options := []chromedp.ExecAllocatorOption{
 		chromedp.Flag("hide-scrollbars", false),
@@ -45,11 +45,15 @@ func (v *VideoInfo) updateDlAddr() (err error) {
 
 	htmlText := ""
 	fullUrl := "https://www.91porn.com/view_video.php?viewkey=" + v.ViewKey
+
+	if len(proxy) > 0 {
+		chromedp.ProxyServer(proxy)
+	}
+
 	if err = chromedp.Run(ctx, sourHtml(fullUrl, "#player_one_html5_api > source", &htmlText)); err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(htmlText)
 	regAddr := regexp.MustCompile(`<source src="(?s:(.*?))" type="`)
 	dlAddr := regAddr.FindAllStringSubmatch(htmlText, 1)
 	if len(dlAddr) > 0 {
@@ -74,37 +78,6 @@ func sourHtml(urlstr, sel string, html *string) chromedp.Tasks {
 		//}),
 		chromedp.OuterHTML(sel, html),
 	}
-}
-
-func orgPageSave(dstUrl, proxyUrl, fileName string) {
-	req, err := http.NewRequest("GET", dstUrl, nil)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	req.Header.Add("Accept-Language", "zh-CN,zh;q=0.9")
-
-	proxy := func(_ *http.Request) (*url.URL, error) {
-		return url.Parse(proxyUrl)
-	}
-	transport := &http.Transport{Proxy: proxy}
-	client := &http.Client{Transport: transport}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	file, err := os.Create(fileName)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer file.Close()
-	buf, _ := ioutil.ReadAll(resp.Body)
-	file.Write(buf)
 }
 
 func pageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
@@ -137,10 +110,6 @@ func pageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 	}
 
 	doc.Find("#wrapper > div.container.container-minheight > div.row > div > div > div > div").Each(func(i int, selection *goquery.Selection) {
-		//fmt.Println(selection.Attr("href"))
-		//fmt.Println(selection.HasClass(""))
-		//fmt.Println(selection.Find("a").Attr("href"))
-		//fmt.Println(selection.Find("a").Find("span.video-title").Text())
 		textStr := selection.Text()
 
 		selection.Find("a").Attr("href")
@@ -185,17 +154,48 @@ func pageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 	return
 }
 
+func orgPageSave(dstUrl, proxyUrl, fileName string) {
+	req, err := http.NewRequest("GET", dstUrl, nil)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	req.Header.Add("Accept-Language", "zh-CN,zh;q=0.9")
+
+	proxy := func(_ *http.Request) (*url.URL, error) {
+		return url.Parse(proxyUrl)
+	}
+	transport := &http.Transport{Proxy: proxy}
+	client := &http.Client{Transport: transport}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	file, err := os.Create(fileName)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer file.Close()
+	buf, _ := ioutil.ReadAll(resp.Body)
+	file.Write(buf)
+}
+
 func main() {
 
 	//testUrl := "https://www.91porn.com/view_video.php?viewkey=16b541c59e6efb52e8dd"
-	const proxyUrl = "http://127.0.0.1:10808"
+	const proxyUrl = "http://192.168.4.66:10808"
 	//testUrl = "https://www.google.com/"
 
-	viAll := pageCrawl("http://91porn.com/index.php", "http://127.0.0.1:10808")
+	viAll := pageCrawl("http://91porn.com/index.php", proxyUrl)
 
 	//orgPageSave(testUrl, proxyUrl, "1.html")
 	for _, vi := range viAll {
-		vi.updateDlAddr()
+		vi.updateDlAddr(proxyUrl)
 		fmt.Println(vi)
 	}
 
