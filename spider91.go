@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -59,9 +60,21 @@ func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
 	return
 }
 
-func (v VideoInfo) Download(savePath string, numThread int) (err error) {
+func (v VideoInfo) Download(savePath, proxy string, numThread int) (err error) {
 
-	return err
+	if len(v.dlAddr) > 0 {
+		strCmd := fmt.Sprintf("-p \"%s\" -t %d -w -o %s \"%s\"", proxy, numThread, savePath, v.dlAddr)
+		fmt.Println(strCmd)
+		out, err := exec.Command("cmd", "/C", "m3_dl").CombinedOutput()
+		if err != nil {
+			fmt.Println(string(out))
+			panic("some error found")
+		}
+	} else {
+		fmt.Errorf("VideoInfo.dlAddr not set!")
+	}
+
+	return
 }
 
 func sourHtml(urlstr, sel string, html *string) chromedp.Tasks {
@@ -122,7 +135,7 @@ func pageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 
 			vi := new(VideoInfo)
 
-			title = ""
+			title = "1"
 			strs := strings.Fields(addTime[0][1])
 
 			if len(strs) == 3 {
@@ -192,6 +205,7 @@ func main() {
 	//orgPageSave(testUrl, proxyUrl, "1.html")
 	for _, vi := range viAll {
 		vi.updateDlAddr(proxyUrl)
+		vi.Download(fmt.Sprintf("\"./%s.ts\"", vi.Title), proxyUrl, 30)
 		fmt.Println(vi)
 	}
 
