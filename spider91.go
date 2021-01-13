@@ -63,9 +63,9 @@ func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
 func (v VideoInfo) Download(savePath, proxy string, numThread int) (err error) {
 
 	if len(v.dlAddr) > 0 {
-		strCmd := fmt.Sprintf("-p \"%s\" -t %d -w -o %s \"%s\"", proxy, numThread, savePath, v.dlAddr)
-		fmt.Println(strCmd)
-		out, err := exec.Command("cmd", "/C", "m3_dl").CombinedOutput()
+		strCmd := fmt.Sprintf(" -p \"%s\" -t %d -w -o %s \"%s\"", proxy, numThread, savePath, v.dlAddr)
+		fmt.Println(exec.Command("m3_dl", strCmd).String())
+		out, err := exec.Command("m3_dl", strCmd).CombinedOutput()
 		if err != nil {
 			fmt.Println(string(out))
 			panic("some error found")
