@@ -32,6 +32,7 @@ func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
 		chromedp.Flag("hide-scrollbars", false),
 		chromedp.Flag("mute-audio", false),
 		chromedp.Flag("blink-settings", "imagesEnabled=false"),
+		chromedp.ProxyServer(proxy),
 		//chromedp.Flag("headless", false),
 		//chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3830.0 Safari/537.36"),
 	}
@@ -45,11 +46,6 @@ func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
 
 	htmlText := ""
 	fullUrl := "https://www.91porn.com/view_video.php?viewkey=" + v.ViewKey
-
-	if len(proxy) > 0 {
-		chromedp.ProxyServer(proxy)
-	}
-
 	if err = chromedp.Run(ctx, sourHtml(fullUrl, "#player_one_html5_api > source", &htmlText)); err != nil {
 		fmt.Println(err)
 		return
