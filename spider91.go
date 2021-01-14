@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -28,7 +29,7 @@ func (v VideoInfo) String() string {
 }
 
 func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
-
+	v.dlAddr = ""
 	options := []chromedp.ExecAllocatorOption{
 		chromedp.Flag("hide-scrollbars", false),
 		chromedp.Flag("mute-audio", false),
@@ -43,7 +44,7 @@ func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
 	defer cancel()
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
-	ctx, _ = context.WithTimeout(ctx, 60*time.Second)
+	ctx, _ = context.WithTimeout(ctx, time.Minute)
 
 	htmlText := ""
 	fullUrl := "https://www.91porn.com/view_video.php?viewkey=" + v.ViewKey
@@ -60,18 +61,28 @@ func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
 	return
 }
 
-func (v VideoInfo) Download(savePath, proxy string, numThread int) (err error) {
+func (v VideoInfo) Download(savePath string, numThread int, proxy string) (err error) {
 
 	if len(v.dlAddr) > 0 {
-		strCmd := fmt.Sprintf(" -p \"%s\" -t %d -w -o %s \"%s\"", proxy, numThread, savePath, v.dlAddr)
-		fmt.Println(exec.Command("m3_dl", strCmd).String())
-		out, err := exec.Command("m3_dl", strCmd).CombinedOutput()
-		if err != nil {
-			fmt.Println(string(out))
-			panic("some error found")
+		//strCmd := fmt.Sprintf(" -p \"%s\" -t %d -w -o %s \"%s\"", proxy, numThread, savePath, v.dlAddr)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, "m3_dl", "-p", proxy, "-t", strconv.Itoa(numThread), "-w", "-o", savePath, v.dlAddr)
+
+		//cmd := exec.Command("m3_dl", "-p", proxy, "-t", strconv.Itoa(numThread), "-w", "-o", savePath, v.dlAddr)
+		//fmt.Println(cmd)
+		out, ierr := cmd.CombinedOutput()
+		if ierr != nil {
+			//fmt.Println(string(out))
+			_ = out
+			err = ierr
+			fmt.Println(v.Title, "download fail!")
+		} else {
+			fmt.Println(v.Title, "download success!")
 		}
 	} else {
-		fmt.Errorf("VideoInfo.dlAddr not set!")
+		fmt.Println(v.Title, "dlAddr not set!")
+		err = fmt.Errorf(v.Title, "dlAddr not set!")
 	}
 
 	return
@@ -135,7 +146,7 @@ func pageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 
 			vi := new(VideoInfo)
 
-			title = "1"
+			//title = "1"
 			strs := strings.Fields(addTime[0][1])
 
 			if len(strs) == 3 {
@@ -194,20 +205,35 @@ func orgPageSave(dstUrl, proxyUrl, fileName string) {
 	file.Write(buf)
 }
 
+func DownladMany(viAll []*VideoInfo, numThread int, proxyUrl string) {
+	ch := make(chan int, len(viAll))
+	chq := make(chan int, numThread)
+	fmt.Print("DownladMany:len([]*VideoInfo)=", len(viAll), "\n")
+	for _, vi := range viAll {
+		go func(info *VideoInfo) {
+			chq <- 1
+			info.updateDlAddr(proxyUrl)
+			curPath, _ := os.Getwd()
+			savePath := filepath.Join(curPath, "save", fmt.Sprintf("%s.ts", info.Title))
+			info.Download(savePath, 20, proxyUrl)
+			<-chq
+			ch <- 1
+		}(vi)
+		time.Sleep(time.Second * 2)
+	}
+
+	for range viAll {
+		<-ch
+	}
+}
+
 func main() {
 
-	//testUrl := "https://www.91porn.com/view_video.php?viewkey=16b541c59e6efb52e8dd"
-	const proxyUrl = "http://192.168.4.66:10808"
-	//testUrl = "https://www.google.com/"
+	const proxyUrl = ""
 
 	viAll := pageCrawl("http://91porn.com/index.php", proxyUrl)
 
-	//orgPageSave(testUrl, proxyUrl, "1.html")
-	for _, vi := range viAll {
-		vi.updateDlAddr(proxyUrl)
-		vi.Download(fmt.Sprintf("\"./%s.ts\"", vi.Title), proxyUrl, 30)
-		fmt.Println(vi)
-	}
+	DownladMany(viAll, 5, proxyUrl)
 
 	return
 }
