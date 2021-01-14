@@ -240,7 +240,6 @@ func main() {
 
 	proxyUrl := ""
 
-	orgPageSave("http://91porn.com/index.php", proxyUrl, "1.html")
 	viAll := pageCrawl("http://91porn.com/index.php", proxyUrl)
 
 	DownladMany(viAll, 5, proxyUrl)
