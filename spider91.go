@@ -187,11 +187,16 @@ func orgPageSave(dstUrl, proxyUrl, fileName string) {
 
 	req.Header.Add("Accept-Language", "zh-CN,zh;q=0.9")
 
-	proxy := func(_ *http.Request) (*url.URL, error) {
-		return url.Parse(proxyUrl)
+	client := &http.Client{}
+
+	if len(proxyUrl) > 0 {
+		fmt.Println("use proxy")
+		proxy := func(_ *http.Request) (*url.URL, error) {
+			return url.Parse(proxyUrl)
+		}
+		transport := &http.Transport{Proxy: proxy}
+		client = &http.Client{Transport: transport}
 	}
-	transport := &http.Transport{Proxy: proxy}
-	client := &http.Client{Transport: transport}
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -233,8 +238,9 @@ func DownladMany(viAll []*VideoInfo, numThread int, proxyUrl string) {
 
 func main() {
 
-	const proxyUrl = ""
+	proxyUrl := ""
 
+	orgPageSave("http://91porn.com/index.php", proxyUrl, "1.html")
 	viAll := pageCrawl("http://91porn.com/index.php", proxyUrl)
 
 	DownladMany(viAll, 5, proxyUrl)
