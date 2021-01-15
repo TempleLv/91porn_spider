@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/chromedp"
@@ -214,7 +215,7 @@ func orgPageSave(dstUrl, proxyUrl, fileName string) {
 	file.Write(buf)
 }
 
-func DownladMany(viAll []*VideoInfo, numThread int, proxyUrl string) {
+func DownladMany(viAll []*VideoInfo, numThread int, proxyUrl, savePath string) {
 	ch := make(chan int, len(viAll))
 	chq := make(chan int, numThread)
 	fmt.Print("DownladMany:len([]*VideoInfo)=", len(viAll), "\n")
@@ -222,8 +223,7 @@ func DownladMany(viAll []*VideoInfo, numThread int, proxyUrl string) {
 		go func(info *VideoInfo) {
 			chq <- 1
 			info.updateDlAddr(proxyUrl)
-			curPath, _ := os.Getwd()
-			savePath := filepath.Join(curPath, "save", fmt.Sprintf("%s.ts", info.Title))
+			savePath := filepath.Join(savePath, fmt.Sprintf("%s.ts", info.Title))
 			info.Download(savePath, 20, proxyUrl)
 			<-chq
 			ch <- 1
@@ -239,10 +239,29 @@ func DownladMany(viAll []*VideoInfo, numThread int, proxyUrl string) {
 func main() {
 
 	proxyUrl := ""
+	pageUrl := ""
+	savePath := ""
+	threadNum := 5
 
-	viAll := pageCrawl("http://91porn.com/index.php", proxyUrl)
+	flag.StringVar(&proxyUrl, "p", "http://192.168.4.66:10808", "proxy")
+	flag.StringVar(&pageUrl, "u", "http://91porn.com/index.php", "page to crawl")
+	flag.StringVar(&savePath, "o", "./save", "path to output")
+	flag.IntVar(&threadNum, "t", 5, "thradcount")
 
-	DownladMany(viAll, 5, proxyUrl)
+	flag.Parse()
+
+	path, _ := filepath.Abs(savePath)
+
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		if err = os.MkdirAll(path, os.ModePerm); err != nil {
+			fmt.Println(err)
+		}
+	}
+
+	viAll := pageCrawl(pageUrl, proxyUrl)
+
+	DownladMany(viAll, threadNum, proxyUrl, path)
 
 	return
 }
