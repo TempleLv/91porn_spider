@@ -224,7 +224,7 @@ func DownladMany(viAll []*VideoInfo, numThread int, proxyUrl, savePath string) {
 			chq <- 1
 			info.updateDlAddr(proxyUrl)
 			savePath := filepath.Join(savePath, fmt.Sprintf("%s.ts", info.Title))
-			info.Download(savePath, 20, proxyUrl)
+			info.Download(savePath, 10, proxyUrl)
 			<-chq
 			ch <- 1
 		}(vi)
