@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/chromedp"
+	"github.com/robfig/cron"
+	"github.com/yanyiwu/gojieba"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -21,16 +23,17 @@ import (
 type VideoInfo struct {
 	Title   string
 	ViewKey string
-	upTime  time.Time
-	dlAddr  string
+	UpTime  time.Time
+	DlAddr  string
+	Vdurat  float32
 }
 
 func (v VideoInfo) String() string {
-	return fmt.Sprintf("VideoInfo: %s %s %s %s", v.Title, v.ViewKey, v.upTime.Format("2006-01-02 15:04:05"), v.dlAddr)
+	return fmt.Sprintf("VideoInfo: %s %s %f %s %s", v.Title, v.ViewKey, v.Vdurat, v.UpTime.Format("2006-01-02 15:04:05"), v.DlAddr)
 }
 
 func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
-	v.dlAddr = ""
+	v.DlAddr = ""
 	options := []chromedp.ExecAllocatorOption{
 		chromedp.Flag("hide-scrollbars", false),
 		chromedp.Flag("mute-audio", false),
@@ -56,7 +59,7 @@ func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
 	regAddr := regexp.MustCompile(`<source src="(?s:(.*?))" type="`)
 	dlAddr := regAddr.FindAllStringSubmatch(htmlText, 1)
 	if len(dlAddr) > 0 {
-		v.dlAddr = dlAddr[0][1]
+		v.DlAddr = dlAddr[0][1]
 	}
 
 	return
@@ -64,13 +67,13 @@ func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
 
 func (v VideoInfo) Download(savePath string, numThread int, proxy string) (err error) {
 
-	if len(v.dlAddr) > 0 {
-		//strCmd := fmt.Sprintf(" -p \"%s\" -t %d -w -o %s \"%s\"", proxy, numThread, savePath, v.dlAddr)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	if len(v.DlAddr) > 0 {
+		//strCmd := fmt.Sprintf(" -p \"%s\" -t %d -w -o %s \"%s\"", proxy, numThread, savePath, v.DlAddr)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*2)
 		defer cancel()
-		cmd := exec.CommandContext(ctx, "m3_dl", "-p", proxy, "-t", strconv.Itoa(numThread), "-w", "-o", savePath, v.dlAddr)
+		cmd := exec.CommandContext(ctx, "m3_dl", "-p", proxy, "-t", strconv.Itoa(numThread), "-w", "-o", savePath, v.DlAddr)
 
-		//cmd := exec.Command("m3_dl", "-p", proxy, "-t", strconv.Itoa(numThread), "-w", "-o", savePath, v.dlAddr)
+		//cmd := exec.Command("m3_dl", "-p", proxy, "-t", strconv.Itoa(numThread), "-w", "-o", savePath, v.DlAddr)
 		//fmt.Println(cmd)
 		out, ierr := cmd.CombinedOutput()
 		if ierr != nil {
@@ -82,8 +85,8 @@ func (v VideoInfo) Download(savePath string, numThread int, proxy string) (err e
 			fmt.Println(v.Title, "download success!")
 		}
 	} else {
-		fmt.Println(v.Title, "dlAddr not set!")
-		err = fmt.Errorf(v.Title, "dlAddr not set!")
+		fmt.Println(v.Title, "DlAddr not set!")
+		err = fmt.Errorf(v.Title, "DlAddr not set!")
 	}
 
 	return
@@ -137,7 +140,6 @@ func pageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 	doc.Find("#wrapper > div.container.container-minheight > div.row > div > div > div > div").Each(func(i int, selection *goquery.Selection) {
 		textStr := selection.Text()
 
-		selection.Find("a").Attr("href")
 		title := selection.Find("a").Find("span.video-title").Text()
 		videoUrl, urlOk := selection.Find("a").Attr("href")
 
@@ -158,20 +160,26 @@ func pageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 				switch strs[1] {
 				case "分钟":
 					duration, _ := time.ParseDuration("-" + strs[0] + "m")
-					vi.upTime = time.Now().Add(duration)
+					vi.UpTime = time.Now().Add(duration)
 				case "小时":
 					duration, _ := time.ParseDuration("-" + strs[0] + "h")
-					vi.upTime = time.Now().Add(duration)
+					vi.UpTime = time.Now().Add(duration)
 				case "天":
 					hourDay, _ := strconv.Atoi(strs[0])
 					hourDay = hourDay * 24
 					duration, _ := time.ParseDuration("-" + strconv.Itoa(hourDay) + "h")
-					vi.upTime = time.Now().Add(duration)
+					vi.UpTime = time.Now().Add(duration)
 				}
 			}
 			vi.Title = title
 			vi.ViewKey = viewkey[0][1]
+			vMinute := 0
+			vSecond := 0
+			fmt.Sscanf(selection.Find("span.duration").Text(), "%d:%d\n", &vMinute, &vSecond)
+			vi.Vdurat = float32(vMinute) + float32(vSecond)/60.0
+
 			viAll = append(viAll, vi)
+
 			//fmt.Println(vi)
 		}
 
@@ -228,7 +236,7 @@ func DownladMany(viAll []*VideoInfo, numThread int, proxyUrl, savePath string) {
 			<-chq
 			ch <- 1
 		}(vi)
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Second * 3)
 	}
 
 	for range viAll {
@@ -237,31 +245,102 @@ func DownladMany(viAll []*VideoInfo, numThread int, proxyUrl, savePath string) {
 }
 
 func main() {
+	//log.Println("starting.....")
+	//c := cron.New(cron.WithSeconds())
+	//
+	//c.AddFunc("* * * * * *", func() {
+	//	log.Println(time.Now())
+	//})
+	//
+	//c.Start()
+	//defer c.Stop()
+	//
+	//select {
+	//
+	//}
 
-	proxyUrl := ""
-	pageUrl := ""
-	savePath := ""
-	threadNum := 5
+	//proxyUrl := ""
+	//pageUrl := ""
+	//savePath := ""
+	//threadNum := 5
+	//
+	//flag.StringVar(&proxyUrl, "p", "", "proxy")
+	//flag.StringVar(&pageUrl, "u", "http://91porn.com/index.php", "page to crawl")
+	//flag.StringVar(&savePath, "o", "./save", "path to output")
+	//flag.IntVar(&threadNum, "t", 5, "thradcount")
+	//
+	//flag.Parse()
+	//
+	//path, _ := filepath.Abs(savePath)
+	//
+	//_, err := os.Stat(path)
+	//if os.IsNotExist(err) {
+	//	if err = os.MkdirAll(path, os.ModePerm); err != nil {
+	//		fmt.Println(err)
+	//	}
+	//}
+	//
+	//viAll := pageCrawl(pageUrl, proxyUrl)
+	//
+	//DownladMany(viAll, threadNum, proxyUrl, path)
+	//
+	//return
 
-	flag.StringVar(&proxyUrl, "p", "http://192.168.4.66:10808", "proxy")
-	flag.StringVar(&pageUrl, "u", "http://91porn.com/index.php", "page to crawl")
-	flag.StringVar(&savePath, "o", "./save", "path to output")
-	flag.IntVar(&threadNum, "t", 5, "thradcount")
+	log.Println("starting.....")
+	c := cron.New(cron.WithSeconds())
 
-	flag.Parse()
+	c.AddFunc("*/5 * * * * *", func() {
+		var viAll []*VideoInfo
+	ALL:
+		for i := 1; i < 50; i++ {
+			vis := pageCrawl("http://91porn.com/v.php?next=watch&page="+strconv.Itoa(i), "")
+			for _, vi := range vis {
+				if time.Now().Sub(vi.UpTime) < time.Hour*24+time.Minute*10 {
+					viAll = append(viAll, vi)
+				} else {
+					break ALL
+				}
+			}
 
-	path, _ := filepath.Abs(savePath)
-
-	_, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		if err = os.MkdirAll(path, os.ModePerm); err != nil {
-			fmt.Println(err)
 		}
-	}
 
-	viAll := pageCrawl(pageUrl, proxyUrl)
+		x := gojieba.NewJieba()
+		defer x.Free()
+		x.AddWord("真舒服")
+		x.AddWord("草死")
+		x.AddWord("网红")
+		x.AddWord("小女友")
+		x.AddWord("大屁股")
+		x.AddWord("跳蛋")
+		x.AddWord("女室友")
+		x.AddWord("D奶")
+		x.AddWord("d奶")
+		x.AddWord("E奶")
+		x.AddWord("e奶")
+		x.AddWord("F奶")
+		x.AddWord("f奶")
+		x.AddWord("小骚货")
+		x.AddWord("魔都")
+		x.AddWord("微露脸")
+		x.AddWord("干进去")
+		x.AddWord("肉臀")
+		x.AddWord("学霸")
+		x.AddWord("小母狗")
+		x.AddWord("高跟")
+		x.AddWord("00后")
 
-	DownladMany(viAll, threadNum, proxyUrl, path)
+		for _, vi := range viAll {
+			fmt.Println(vi.Title)
+			//words := x.Cut(vi.Title, true)
+			words := x.Cut(vi.Title, true)
+			fmt.Println("精确模式:", strings.Join(words, "/"))
+		}
 
-	return
+	})
+
+	c.Start()
+	defer c.Stop()
+
+	select {}
+
 }
