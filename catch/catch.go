@@ -22,7 +22,7 @@ type VideoInfo struct {
 	ViewKey string
 	UpTime  time.Time
 	DlAddr  string
-	Vdurat  float32
+	Vdurat  float64
 	Watch   int
 	Collect int
 }
@@ -184,7 +184,7 @@ func PageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 			vMinute := 0
 			vSecond := 0
 			fmt.Sscanf(selection.Find("span.duration").Text(), "%d:%d\n", &vMinute, &vSecond)
-			vi.Vdurat = float32(vMinute) + float32(vSecond)/60.0
+			vi.Vdurat = float64(vMinute) + float64(vSecond)/60.0
 
 			viAll = append(viAll, vi)
 

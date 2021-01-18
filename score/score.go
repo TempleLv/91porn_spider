@@ -1,13 +1,22 @@
 package score
 
 import (
+	"fmt"
 	"github.com/yanyiwu/gojieba"
+	"io/ioutil"
 	"spider91/catch"
+	"strconv"
+	"strings"
 )
 
-func Score(info catch.VideoInfo) float32 {
+type Score struct {
+	jieba    *gojieba.Jieba
+	keyValue map[string]int
+}
+
+func NewScore(keyFile string) *Score {
+	mapKv := map[string]int{}
 	x := gojieba.NewJieba()
-	defer x.Free()
 	x.AddWord("真舒服")
 	x.AddWord("草死")
 	x.AddWord("网红")
@@ -31,10 +40,57 @@ func Score(info catch.VideoInfo) float32 {
 	x.AddWord("高跟")
 	x.AddWord("00后")
 
+	data, err := ioutil.ReadFile(keyFile)
+	if err != nil {
+		fmt.Println("keyFile read fail:", err)
+	}
+
+	for _, line := range strings.Split(string(data), "\n") {
+		strs := strings.Fields(line)
+		if len(strs) == 2 {
+			v, err := strconv.Atoi(strs[1])
+			if err != nil || v > 100 {
+				fmt.Println("wrong key value format!", strs)
+				continue
+			}
+			mapKv[strs[0]] = v
+			x.AddWord(strs[0])
+		} else {
+			fmt.Println("wrong key value format!", strs)
+		}
+
+	}
+
+	return &Score{x, mapKv}
+}
+
+func (s *Score) Free() {
+	s.jieba.Free()
+}
+
+func (s *Score) Grade(info catch.VideoInfo) float64 {
+
+	words := s.jieba.Cut(info.Title, true)
+	var titleScore, duraScore, viewScore float64
+	for _, w := range words {
+		titleScore += float64(s.keyValue[w])
+	}
+
+	duraScore = 10.0 * info.Vdurat
+	if duraScore > 100 {
+		duraScore = 100
+	}
+
+	viewScore = 0.0
+
+	finalScore := 0.4*titleScore + 0.4*duraScore + viewScore*0.2
+	//fmt.Println(finalScore, titleScore, duraScore, 0.35 * titleScore, 0.45*duraScore)
+
 	//for _, vi := range viAll {
 	//	fmt.Println(vi.Title)
 	//	//words := x.Cut(vi.Title, true)
 	//	words := x.Cut(vi.Title, true)
 	//	fmt.Println("精确模式:", strings.Join(words, "/"))
 	//}
+	return finalScore
 }
