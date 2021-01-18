@@ -188,7 +188,7 @@ func PageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 
 			viAll = append(viAll, vi)
 
-			fmt.Println(vi)
+			//fmt.Println(vi)
 		}
 
 	})
