@@ -1,14 +1,11 @@
-package main
+package catch
 
 import (
 	"context"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/chromedp"
-	"github.com/robfig/cron"
-	"github.com/yanyiwu/gojieba"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -26,10 +23,13 @@ type VideoInfo struct {
 	UpTime  time.Time
 	DlAddr  string
 	Vdurat  float32
+	Watch   int
+	Collect int
 }
 
 func (v VideoInfo) String() string {
-	return fmt.Sprintf("VideoInfo: %s %s %f %s %s", v.Title, v.ViewKey, v.Vdurat, v.UpTime.Format("2006-01-02 15:04:05"), v.DlAddr)
+	return fmt.Sprintf("VideoInfo: %s %s %f %d %d %s %s",
+		v.Title, v.ViewKey, v.Vdurat, v.Watch, v.Collect, v.UpTime.Format("2006-01-02 15:04:05"), v.DlAddr)
 }
 
 func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
@@ -104,7 +104,7 @@ func sourHtml(urlstr, sel string, html *string) chromedp.Tasks {
 	}
 }
 
-func pageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
+func PageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 	req, err := http.NewRequest("GET", dstUrl, nil)
 	if err != nil {
 		fmt.Println(err)
@@ -145,11 +145,15 @@ func pageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 
 		regViewKey := regexp.MustCompile(`91porn.com/view_video.php\?viewkey=(?s:(.*?))&page`)
 		regAddTime := regexp.MustCompile(`添加时间:(?s:(.*?))\n`)
+		regWatch := regexp.MustCompile(`查看:(?s:(.*?))\n`)
+		regCollect := regexp.MustCompile(`收藏:(?s:(.*?))\n`)
 
 		viewkey := regViewKey.FindAllStringSubmatch(videoUrl, 1)
 		addTime := regAddTime.FindAllStringSubmatch(textStr, 1)
+		watch := regWatch.FindAllStringSubmatch(textStr, 1)
+		collect := regCollect.FindAllStringSubmatch(textStr, 1)
 
-		if len(viewkey) > 0 && len(addTime) > 0 && urlOk {
+		if len(viewkey) > 0 && len(addTime) > 0 && len(watch) > 0 && len(collect) > 0 && urlOk {
 
 			vi := new(VideoInfo)
 
@@ -173,6 +177,10 @@ func pageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 			}
 			vi.Title = title
 			vi.ViewKey = viewkey[0][1]
+			strs = strings.Fields(watch[0][1])
+			vi.Watch, _ = strconv.Atoi(strs[0])
+			strs = strings.Fields(collect[0][1])
+			vi.Collect, _ = strconv.Atoi(strs[0])
 			vMinute := 0
 			vSecond := 0
 			fmt.Sscanf(selection.Find("span.duration").Text(), "%d:%d\n", &vMinute, &vSecond)
@@ -180,14 +188,14 @@ func pageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 
 			viAll = append(viAll, vi)
 
-			//fmt.Println(vi)
+			fmt.Println(vi)
 		}
 
 	})
 	return
 }
 
-func orgPageSave(dstUrl, proxyUrl, fileName string) {
+func OrgPageSave(dstUrl, proxyUrl, fileName string) {
 	req, err := http.NewRequest("GET", dstUrl, nil)
 	if err != nil {
 		fmt.Println(err)
@@ -242,105 +250,4 @@ func DownladMany(viAll []*VideoInfo, numThread int, proxyUrl, savePath string) {
 	for range viAll {
 		<-ch
 	}
-}
-
-func main() {
-	//log.Println("starting.....")
-	//c := cron.New(cron.WithSeconds())
-	//
-	//c.AddFunc("* * * * * *", func() {
-	//	log.Println(time.Now())
-	//})
-	//
-	//c.Start()
-	//defer c.Stop()
-	//
-	//select {
-	//
-	//}
-
-	//proxyUrl := ""
-	//pageUrl := ""
-	//savePath := ""
-	//threadNum := 5
-	//
-	//flag.StringVar(&proxyUrl, "p", "", "proxy")
-	//flag.StringVar(&pageUrl, "u", "http://91porn.com/index.php", "page to crawl")
-	//flag.StringVar(&savePath, "o", "./save", "path to output")
-	//flag.IntVar(&threadNum, "t", 5, "thradcount")
-	//
-	//flag.Parse()
-	//
-	//path, _ := filepath.Abs(savePath)
-	//
-	//_, err := os.Stat(path)
-	//if os.IsNotExist(err) {
-	//	if err = os.MkdirAll(path, os.ModePerm); err != nil {
-	//		fmt.Println(err)
-	//	}
-	//}
-	//
-	//viAll := pageCrawl(pageUrl, proxyUrl)
-	//
-	//DownladMany(viAll, threadNum, proxyUrl, path)
-	//
-	//return
-
-	log.Println("starting.....")
-	c := cron.New(cron.WithSeconds())
-
-	c.AddFunc("*/5 * * * * *", func() {
-		var viAll []*VideoInfo
-	ALL:
-		for i := 1; i < 50; i++ {
-			vis := pageCrawl("http://91porn.com/v.php?next=watch&page="+strconv.Itoa(i), "")
-			for _, vi := range vis {
-				if time.Now().Sub(vi.UpTime) < time.Hour*24+time.Minute*10 {
-					viAll = append(viAll, vi)
-				} else {
-					break ALL
-				}
-			}
-
-		}
-
-		x := gojieba.NewJieba()
-		defer x.Free()
-		x.AddWord("真舒服")
-		x.AddWord("草死")
-		x.AddWord("网红")
-		x.AddWord("小女友")
-		x.AddWord("大屁股")
-		x.AddWord("跳蛋")
-		x.AddWord("女室友")
-		x.AddWord("D奶")
-		x.AddWord("d奶")
-		x.AddWord("E奶")
-		x.AddWord("e奶")
-		x.AddWord("F奶")
-		x.AddWord("f奶")
-		x.AddWord("小骚货")
-		x.AddWord("魔都")
-		x.AddWord("微露脸")
-		x.AddWord("干进去")
-		x.AddWord("肉臀")
-		x.AddWord("学霸")
-		x.AddWord("小母狗")
-		x.AddWord("高跟")
-		x.AddWord("00后")
-
-		for _, vi := range viAll {
-			fmt.Println(vi.Title)
-			//words := x.Cut(vi.Title, true)
-			words := x.Cut(vi.Title, true)
-			fmt.Println("精确模式:", strings.Join(words, "/"))
-		}
-
-	})
-
-	c.Start()
-	defer c.Stop()
-
-	select {}
-
 }
