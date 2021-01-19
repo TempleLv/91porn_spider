@@ -25,11 +25,30 @@ type VideoInfo struct {
 	Vdurat  float64
 	Watch   int
 	Collect int
+	Score   float64
+}
+
+type ViSlice []*VideoInfo
+
+func (v ViSlice) Len() int { return len(v) }
+
+func (v ViSlice) Swap(i, j int) { v[i], v[j] = v[j], v[i] }
+
+func (v ViSlice) Less(i, j int) bool { return v[i].Score < v[j].Score }
+
+func (v ViSlice) String() string {
+	str := ""
+	for _, v := range v {
+		str += fmt.Sprintf("VideoInfo: (%.1f %.1f)%s %s %d %d %s %s\n",
+			v.Score, v.Vdurat, v.Title, v.ViewKey, v.Watch, v.Collect, v.UpTime.Format("2006-01-02 15:04:05"), v.DlAddr)
+	}
+
+	return str
 }
 
 func (v VideoInfo) String() string {
-	return fmt.Sprintf("VideoInfo: %s %s %f %d %d %s %s",
-		v.Title, v.ViewKey, v.Vdurat, v.Watch, v.Collect, v.UpTime.Format("2006-01-02 15:04:05"), v.DlAddr)
+	return fmt.Sprintf("VideoInfo: (%.1f %.1f)%s %s %d %d %s %s",
+		v.Score, v.Vdurat, v.Title, v.ViewKey, v.Watch, v.Collect, v.UpTime.Format("2006-01-02 15:04:05"), v.DlAddr)
 }
 
 func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
@@ -231,7 +250,7 @@ func OrgPageSave(dstUrl, proxyUrl, fileName string) {
 	file.Write(buf)
 }
 
-func DownladMany(viAll []*VideoInfo, numThread int, proxyUrl, savePath string) {
+func DownloadMany(viAll []*VideoInfo, numThread int, proxyUrl, savePath string) (failVi []*VideoInfo) {
 	ch := make(chan int, len(viAll))
 	chq := make(chan int, numThread)
 	fmt.Print("DownladMany:len([]*VideoInfo)=", len(viAll), "\n")
@@ -240,7 +259,10 @@ func DownladMany(viAll []*VideoInfo, numThread int, proxyUrl, savePath string) {
 			chq <- 1
 			info.updateDlAddr(proxyUrl)
 			savePath := filepath.Join(savePath, fmt.Sprintf("%s.ts", info.Title))
-			info.Download(savePath, 10, proxyUrl)
+			err := info.Download(savePath, 10, proxyUrl)
+			if err != nil {
+				failVi = append(failVi, info)
+			}
 			<-chq
 			ch <- 1
 		}(vi)
@@ -250,4 +272,5 @@ func DownladMany(viAll []*VideoInfo, numThread int, proxyUrl, savePath string) {
 	for range viAll {
 		<-ch
 	}
+	return
 }

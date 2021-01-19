@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/yanyiwu/gojieba"
 	"io/ioutil"
+	"sort"
 	"spider91/catch"
 	"strconv"
 	"strings"
@@ -68,7 +69,7 @@ func (s *Score) Free() {
 	s.jieba.Free()
 }
 
-func (s *Score) Grade(info catch.VideoInfo) float64 {
+func (s *Score) Grade(info *catch.VideoInfo) float64 {
 
 	words := s.jieba.Cut(info.Title, true)
 	var titleScore, duraScore, viewScore float64
@@ -84,13 +85,13 @@ func (s *Score) Grade(info catch.VideoInfo) float64 {
 	viewScore = 0.0
 
 	finalScore := 0.4*titleScore + 0.4*duraScore + viewScore*0.2
-	//fmt.Println(finalScore, titleScore, duraScore, 0.35 * titleScore, 0.45*duraScore)
 
-	//for _, vi := range viAll {
-	//	fmt.Println(vi.Title)
-	//	//words := x.Cut(vi.Title, true)
-	//	words := x.Cut(vi.Title, true)
-	//	fmt.Println("精确模式:", strings.Join(words, "/"))
-	//}
 	return finalScore
+}
+
+func (s *Score) GradeSort(vis []*catch.VideoInfo) {
+	for _, vi := range vis {
+		vi.Score = s.Grade(vi)
+	}
+	sort.Sort(sort.Reverse(catch.ViSlice(vis)))
 }
