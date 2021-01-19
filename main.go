@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/robfig/cron/v3"
 	"io"
 	"log"
@@ -54,19 +53,16 @@ func main() {
 
 	log.Println("uptime:", time.Now().Format("2006-01-02 15:04:05"))
 
-	savePath := time.Now().Format("./save/060102")
-	fmt.Println(savePath)
-
 	c := cron.New(cron.WithSeconds())
 
-	c.AddFunc("0 50 15 * * *", func() {
+	c.AddFunc("0 55 14 * * *", func() {
 		log.Println("Start Download!!")
 		var viAll []*catch.VideoInfo
 		s := score.NewScore("./score/wordValue.txt")
 		defer s.Free()
 	ALL:
 		for i := 1; i < 50; i++ {
-			vis := catch.PageCrawl("http://91porn.com/v.php?next=watch&page="+strconv.Itoa(i), "http://192.168.4.66:10808")
+			vis := catch.PageCrawl("http://91porn.com/v.php?next=watch&page="+strconv.Itoa(i), "")
 			for _, vi := range vis {
 				if time.Now().Sub(vi.UpTime) < time.Hour*24+time.Minute*10 {
 					viAll = append(viAll, vi)
@@ -74,7 +70,6 @@ func main() {
 					break ALL
 				}
 			}
-
 		}
 
 		s.GradeSort(viAll)
@@ -93,7 +88,12 @@ func main() {
 		}
 
 		failVi := catch.DownloadMany(pickVi, 5, "", savePath)
+		if len(failVi) > 0 {
+			//use backup proxy to download
+			failVi = catch.DownloadMany(pickVi, 5, "socks5://192.168.3.254:10808", savePath)
+		}
 
+		log.Println("Download success %d files,fail %d files!", len(pickVi)-len(failVi), len(failVi))
 		for _, vi := range failVi {
 			log.Println("Download Fail!", vi.Title, vi.ViewKey)
 		}
@@ -103,5 +103,4 @@ func main() {
 	defer c.Stop()
 
 	select {}
-
 }
