@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/robfig/cron/v3"
 	"io"
+	"io/ioutil"
 	"log"
 	"math"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"spider91/catch"
 	"spider91/score"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -51,12 +53,35 @@ func main() {
 	logW := io.MultiWriter(logFile, os.Stdout)
 	log.SetOutput(logW)
 
-	log.Println("uptime:", time.Now().Format("2006-01-02 15:04:05"))
+	log.Println("spider91 startup!")
 
 	c := cron.New(cron.WithSeconds())
 
-	c.AddFunc("0 55 14 * * *", func() {
-		log.Println("Start Download!!")
+	c.AddFunc("00 00 04 * * 6", func() {
+
+		log.Println("Start weekly organize!!")
+		savePath := time.Now().Format("./save/weekly_060102")
+
+		path, _ := filepath.Abs(savePath)
+
+		_, err := os.Stat(path)
+		if os.IsNotExist(err) {
+			if err = os.MkdirAll(path, os.ModePerm); err != nil {
+				log.Println("savePath create failed!", err)
+				return
+			}
+		}
+		fi, _ := ioutil.ReadDir("./save")
+
+		for _, f := range fi {
+			if f.IsDir() && strings.Contains(f.Name(), "daily") {
+				os.Rename(filepath.Join("./save", f.Name()), filepath.Join(path, f.Name()))
+			}
+		}
+	})
+
+	c.AddFunc("00 30 02 * * *", func() {
+		log.Println("Start daily Download!!")
 		var viAll []*catch.VideoInfo
 		s := score.NewScore("./score/wordValue.txt")
 		defer s.Free()
@@ -75,7 +100,7 @@ func main() {
 		s.GradeSort(viAll)
 		length := int(math.Min(40, float64(len(viAll))))
 		pickVi := viAll[:length]
-		savePath := time.Now().Format("./save/060102")
+		savePath := time.Now().Format("./save/daily_060102")
 
 		path, _ := filepath.Abs(savePath)
 
@@ -87,10 +112,10 @@ func main() {
 			}
 		}
 
-		failVi := catch.DownloadMany(pickVi, 5, "", savePath)
+		failVi := catch.DownloadMany(pickVi, 5, "", path)
 		if len(failVi) > 0 {
 			//use backup proxy to download
-			failVi = catch.DownloadMany(pickVi, 5, "socks5://192.168.3.254:10808", savePath)
+			failVi = catch.DownloadMany(pickVi, 5, "socks5://192.168.3.254:10808", path)
 		}
 
 		log.Println("Download success %d files,fail %d files!", len(pickVi)-len(failVi), len(failVi))
