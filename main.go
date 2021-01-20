@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"github.com/robfig/cron/v3"
 	"io"
 	"io/ioutil"
@@ -17,32 +19,36 @@ import (
 
 func main() {
 
-	//proxyUrl := ""
-	//pageUrl := ""
-	//savePath := ""
-	//threadNum := 5
-	//
-	//flag.StringVar(&proxyUrl, "p", "", "proxy")
-	//flag.StringVar(&pageUrl, "u", "http://91porn.com/index.php", "page to crawl")
-	//flag.StringVar(&savePath, "o", "./save", "path to output")
-	//flag.IntVar(&threadNum, "t", 5, "threadcount")
-	//
-	//flag.Parse()
-	//
-	//path, _ := filepath.Abs(savePath)
-	//
-	//_, err := os.Stat(path)
-	//if os.IsNotExist(err) {
-	//	if err = os.MkdirAll(path, os.ModePerm); err != nil {
-	//		fmt.Println(err)
-	//	}
-	//}
-	//
-	//viAll := catch.PageCrawl(pageUrl, proxyUrl)
-	//
-	//catch.DownladMany(viAll, threadNum, proxyUrl, path)
-	//
-	//return
+	proxyUrl := ""
+	pageUrl := ""
+	savePath := ""
+	threadNum := 5
+	cpage := false
+
+	flag.StringVar(&proxyUrl, "p", "", "proxy")
+	flag.StringVar(&pageUrl, "u", "http://91porn.com/index.php", "page to crawl")
+	flag.StringVar(&savePath, "o", "./save", "path to output")
+	flag.IntVar(&threadNum, "t", 5, "threadcount")
+	flag.BoolVar(&cpage, "c", false, "crawl whole page")
+
+	flag.Parse()
+
+	if cpage == true {
+		path, _ := filepath.Abs(savePath)
+
+		_, err := os.Stat(path)
+		if os.IsNotExist(err) {
+			if err = os.MkdirAll(path, os.ModePerm); err != nil {
+				fmt.Println(err)
+			}
+		}
+
+		viAll := catch.PageCrawl(pageUrl, proxyUrl)
+
+		catch.DownloadMany(viAll, threadNum, proxyUrl, path)
+
+		return
+	}
 
 	logFile, err := os.OpenFile("spider91.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
 	if err != nil {
