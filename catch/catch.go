@@ -67,7 +67,7 @@ func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
 	defer cancel()
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
-	ctx, _ = context.WithTimeout(ctx, time.Minute)
+	ctx, _ = context.WithTimeout(ctx, time.Second*15)
 
 	htmlText := ""
 	fullUrl := "https://www.91porn.com/view_video.php?viewkey=" + v.ViewKey

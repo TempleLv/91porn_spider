@@ -121,6 +121,7 @@ func main() {
 		failVi := catch.DownloadMany(pickVi, 5, "", path)
 		if len(failVi) > 0 {
 			//use backup proxy to download
+			log.Println("Download fail %d files,using backup proxy for saveing!", len(failVi))
 			failVi = catch.DownloadMany(pickVi, 5, "socks5://192.168.3.254:10808", path)
 		}
 
