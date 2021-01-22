@@ -157,7 +157,7 @@ func main() {
 		"",
 		"socks5://192.168.3.254:10808",
 	}
-	c.AddFunc("00 30 02 * * *", dailyFunc(proxyUrls))
+	c.AddFunc("00 00 03 * * *", dailyFunc(proxyUrls))
 
 	c.Start()
 	defer c.Stop()
