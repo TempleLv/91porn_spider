@@ -138,7 +138,17 @@ func main() {
 		return
 	}
 
-	logFile, err := os.OpenFile("spider91.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
+	path, _ := filepath.Abs("./save/")
+
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		if err = os.MkdirAll(path, os.ModePerm); err != nil {
+			log.Println("log path create failed!", err)
+			return
+		}
+	}
+
+	logFile, err := os.OpenFile("./save/spider91.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
 	if err != nil {
 		panic(err)
 	}
