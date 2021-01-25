@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"spider91/catch"
+	"spider91/doneDB"
 	"spider91/score"
 	"strconv"
 	"strings"
@@ -69,14 +70,22 @@ func dailyFunc(proxyUrls []string) func() {
 		}
 
 		if len(viAll) > 0 {
+			ddb, err := doneDB.OpenVDB("./save/videoDB.db")
+			if err != nil {
+				log.Println("videoDB.db open fail!!!")
+				return
+			}
+			defer ddb.Close()
+
+			viAll = ddb.DelRepeat(viAll)
 			s.GradeSort(viAll)
 			length := int(math.Min(40, float64(len(viAll))))
-			pickVi := viAll[:length]
+			pickVi := append(viAll[:length], ddb.GetUD()...)
 			savePath := time.Now().Format("./save/daily_060102")
 
 			path, _ := filepath.Abs(savePath)
 
-			_, err := os.Stat(path)
+			_, err = os.Stat(path)
 			if os.IsNotExist(err) {
 				if err = os.MkdirAll(path, os.ModePerm); err != nil {
 					log.Println("savePath create failed!", err)
@@ -93,7 +102,8 @@ func dailyFunc(proxyUrls []string) func() {
 					log.Printf("proxy:%s left %d items\n", pu, len(failVi))
 				}
 			}
-
+			ddb.AddDone(pickVi)
+			ddb.UpdateUD(failVi)
 			log.Printf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
 			for _, vi := range failVi {
 				log.Println("Download Fail!", vi.Title, vi.ViewKey)
@@ -106,6 +116,20 @@ func dailyFunc(proxyUrls []string) func() {
 }
 
 func main() {
+
+	//ddb, err1 := doneDB.OpenVDB("./save/videoDB.db")
+	//if err1 != nil {
+	//	panic(err1)
+	//}
+	//defer ddb.Close()
+	//
+	//viAll := catch.PageCrawl("http://91porn.com/index.php", "")
+	////ddb.AddDone(viAll)
+	//ddb.UpdateUD(viAll)
+	////viAll = ddb.DelRepeat(viAll)
+	//viAll = ddb.GetUD()
+	//
+	//return
 
 	proxyUrl := ""
 	pageUrl := ""

@@ -20,6 +20,7 @@ import (
 type VideoInfo struct {
 	Title   string
 	ViewKey string
+	Owner   string
 	UpTime  time.Time
 	DlAddr  string
 	Vdurat  float64
@@ -166,13 +167,15 @@ func PageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 		regAddTime := regexp.MustCompile(`添加时间:(?s:(.*?))\n`)
 		regWatch := regexp.MustCompile(`查看:(?s:(.*?))\n`)
 		regCollect := regexp.MustCompile(`收藏:(?s:(.*?))\n`)
+		regOwner := regexp.MustCompile(`作者: \n(?s:(.*?))\n`)
 
 		viewkey := regViewKey.FindAllStringSubmatch(videoUrl, 1)
 		addTime := regAddTime.FindAllStringSubmatch(textStr, 1)
 		watch := regWatch.FindAllStringSubmatch(textStr, 1)
 		collect := regCollect.FindAllStringSubmatch(textStr, 1)
+		owner := regOwner.FindAllStringSubmatch(textStr, 1)
 
-		if len(viewkey) > 0 && len(addTime) > 0 && len(watch) > 0 && len(collect) > 0 && urlOk {
+		if len(viewkey) > 0 && len(addTime) > 0 && len(watch) > 0 && len(collect) > 0 && len(owner) > 0 && urlOk {
 
 			vi := new(VideoInfo)
 
@@ -200,6 +203,7 @@ func PageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 			vi.Watch, _ = strconv.Atoi(strs[0])
 			strs = strings.Fields(collect[0][1])
 			vi.Collect, _ = strconv.Atoi(strs[0])
+			vi.Owner = strings.Fields(owner[0][1])[0]
 			vMinute := 0
 			vSecond := 0
 			fmt.Sscanf(selection.Find("span.duration").Text(), "%d:%d\n", &vMinute, &vSecond)
