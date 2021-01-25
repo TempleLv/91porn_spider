@@ -72,7 +72,7 @@ func dailyFunc(proxyUrls []string) func() {
 		if len(viAll) > 0 {
 			ddb, err := doneDB.OpenVDB("./save/videoDB.db")
 			if err != nil {
-				log.Println("videoDB.db open fail!!!")
+				log.Println("videoDB.db open fail!!!", err)
 				return
 			}
 			defer ddb.Close()
