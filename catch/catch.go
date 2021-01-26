@@ -262,7 +262,7 @@ func DownloadMany(viAll []*VideoInfo, numThread int, proxyUrl, savePath string) 
 		go func(info *VideoInfo) {
 			chq <- 1
 			info.updateDlAddr(proxyUrl)
-			savePath := filepath.Join(savePath, fmt.Sprintf("%s.ts", info.Title))
+			savePath := filepath.Join(savePath, fmt.Sprintf("%s(%s).ts", info.Title, info.Owner))
 			err := info.Download(savePath, 10, proxyUrl)
 			if err != nil {
 				failVi = append(failVi, info)

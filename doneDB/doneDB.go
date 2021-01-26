@@ -22,6 +22,7 @@ func (v *VideoDB) AddDone(vis []*catch.VideoInfo) (fails []*catch.VideoInfo) {
 		if err == nil {
 			_, err := stmt.Exec(vi.ViewKey, vi.Title, vi.Owner, vi.UpTime)
 			//fmt.Println(err)
+			stmt.Close()
 			if err == nil {
 				continue
 			}
@@ -55,6 +56,7 @@ func (v *VideoDB) UpdateUD(vis []*catch.VideoInfo) (fails []*catch.VideoInfo) {
 			if err == nil {
 				_, err := stmt.Exec(vi.ViewKey, vi.Title, vi.Owner, vi.UpTime, 1)
 				//fmt.Println(err)
+				stmt.Close()
 				if err == nil {
 					continue
 				}
@@ -68,6 +70,7 @@ func (v *VideoDB) UpdateUD(vis []*catch.VideoInfo) (fails []*catch.VideoInfo) {
 					stmt, err := v.db.Prepare("delete from undone where viewkey=?")
 					if err == nil {
 						stmt.Exec(vi.ViewKey)
+						stmt.Close()
 						continue
 					}
 				} else {
@@ -75,6 +78,7 @@ func (v *VideoDB) UpdateUD(vis []*catch.VideoInfo) (fails []*catch.VideoInfo) {
 					stmt, err := v.db.Prepare("update undone set failcount=? where viewkey=?")
 					if err == nil {
 						stmt.Exec(failcount+1, vi.ViewKey)
+						stmt.Close()
 						continue
 					}
 				}
