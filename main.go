@@ -28,7 +28,7 @@ func weeklyFunc(proxyUrls []string) func() {
 		s := score.NewScore("./score/wordValue.txt", "./score/ownValue.txt")
 		defer s.Free()
 
-		for i := 1; i < 5; i++ {
+		for i := 1; i < 6; i++ {
 			var vis []*catch.VideoInfo
 			for _, pu := range proxyUrls {
 				vis = catch.PageCrawl("http://91porn.com/v.php?category=rf&viewtype=basic&page="+strconv.Itoa(i), pu)
@@ -198,6 +198,9 @@ func main() {
 	//ddb.ClearDone(time.Now().Add(-time.Hour*24*2 + time.Hour*10))
 	//return
 
+	//catch.PageCrawlOne("http://91porn.com/view_video.php?viewkey=8cd0148b3fe08d4a4c2f&page=3&viewtype=basic&category=rf", "http://192.168.4.66:10808")
+	//return
+
 	proxyUrl := ""
 	pageUrl := ""
 	savePath := ""
@@ -212,7 +215,6 @@ func main() {
 
 	flag.Parse()
 
-	//TODO:增加单个页面的爬取功能。
 	if cpage == true {
 		path, _ := filepath.Abs(savePath)
 
@@ -222,10 +224,20 @@ func main() {
 				fmt.Println(err)
 			}
 		}
+		if strings.Contains(pageUrl, "viewkey") {
 
-		viAll := catch.PageCrawl(pageUrl, proxyUrl)
+			vi, err := catch.PageCrawlOne(pageUrl, proxyUrl)
+			if err == nil {
+				fmt.Println("Crawled one page, DownLoading", fmt.Sprintf("%s(%s).ts", vi.Title, vi.Owner))
+				savePath := filepath.Join(path, fmt.Sprintf("%s(%s).ts", vi.Title, vi.Owner))
+				vi.Download(savePath, threadNum, proxyUrl)
+			}
 
-		catch.DownloadMany(viAll, threadNum, proxyUrl, path)
+		} else {
+			viAll := catch.PageCrawl(pageUrl, proxyUrl)
+
+			catch.DownloadMany(viAll, threadNum, proxyUrl, path)
+		}
 
 		return
 	}

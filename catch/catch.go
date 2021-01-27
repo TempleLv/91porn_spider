@@ -124,6 +124,58 @@ func sourHtml(urlstr, sel string, html *string) chromedp.Tasks {
 	}
 }
 
+func sourManyHtml(urlstr string, sel, html []string) chromedp.Tasks {
+	task := chromedp.Tasks{
+		chromedp.Navigate(urlstr),
+	}
+	if len(sel) == len(html) {
+		for i, _ := range sel {
+			task = append(task, chromedp.OuterHTML(sel[i], &html[i]))
+		}
+	}
+
+	return task
+}
+
+func PageCrawlOne(dstUrl, proxyUrl string) (vi VideoInfo, err error) {
+	vi.DlAddr = ""
+	options := []chromedp.ExecAllocatorOption{
+		chromedp.Flag("hide-scrollbars", false),
+		chromedp.Flag("mute-audio", false),
+		chromedp.Flag("blink-settings", "imagesEnabled=false"),
+		chromedp.ProxyServer(proxyUrl),
+		//chromedp.Flag("headless", false),
+		//chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3830.0 Safari/537.36"),
+	}
+	options = append(chromedp.DefaultExecAllocatorOptions[:], options...)
+
+	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), options...)
+	defer cancel()
+	ctx, cancel := chromedp.NewContext(allocCtx)
+	defer cancel()
+	ctx, _ = context.WithTimeout(ctx, time.Second*25)
+
+	sels := [...]string{"#player_one_html5_api > source", "#videodetails > h4", "#videodetails-content > div:nth-child(3) > span.title-yakov > a:nth-child(1) > span"}
+	htmlText := [len(sels)]string{}
+	if err = chromedp.Run(ctx, sourManyHtml(dstUrl, sels[:], htmlText[:])); err != nil {
+		fmt.Println(err)
+		return
+	}
+	regAddr := regexp.MustCompile(`<source src="(?s:(.*?))" type="`)
+	regTitle := regexp.MustCompile(`<h4 class="login_register_header" align="left">(?s:(.*?))\n`)
+	regOwner := regexp.MustCompile(`<span class="title">(?s:(.*?))</span>`)
+	dlAddr := regAddr.FindAllStringSubmatch(htmlText[0], 1)
+	title := regTitle.FindAllStringSubmatch(htmlText[1], 1)
+	owner := regOwner.FindAllStringSubmatch(htmlText[2], 1)
+	if len(dlAddr) > 0 && len(title) > 0 && len(owner) > 0 {
+		vi.DlAddr = dlAddr[0][1]
+		vi.Title = strings.TrimSpace(title[0][1])
+		vi.Owner = owner[0][1]
+	}
+
+	return
+}
+
 func PageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 	req, err := http.NewRequest("GET", dstUrl, nil)
 	if err != nil {
