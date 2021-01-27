@@ -2,9 +2,9 @@ package doneDB
 
 import (
 	"database/sql"
-	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"spider91/catch"
+	"time"
 )
 
 type VideoDB struct {
@@ -29,6 +29,18 @@ func (v *VideoDB) AddDone(vis []*catch.VideoInfo) (fails []*catch.VideoInfo) {
 		}
 
 		fails = append(fails, vi)
+	}
+
+	return
+}
+
+func (v *VideoDB) ClearDone(before time.Time) (err error) {
+
+	stmt, err := v.db.Prepare("delete from done where UpTime<?")
+	if err == nil {
+		_, err = stmt.Exec(before)
+		//fmt.Println(err)
+		stmt.Close()
 	}
 
 	return
@@ -129,9 +141,7 @@ func OpenVDB(filename string) (vdb *VideoDB, err error) {
 			"failcount" INTEGER NOT NULL DEFAULT 0
 		);
 	   `
-		var res sql.Result
-		res, err = vdb.db.Exec(sql_table)
-		fmt.Println(res, err)
+		_, err = vdb.db.Exec(sql_table)
 		return
 	}
 

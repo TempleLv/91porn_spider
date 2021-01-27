@@ -25,7 +25,7 @@ func weeklyFunc(proxyUrls []string) func() {
 		log.Println("Start weekly download and organize!!")
 
 		var viAll []*catch.VideoInfo
-		s := score.NewScore("./score/wordValue.txt")
+		s := score.NewScore("./score/wordValue.txt", "./score/ownValue.txt")
 		defer s.Free()
 
 		for i := 1; i < 5; i++ {
@@ -113,7 +113,7 @@ func dailyFunc(proxyUrls []string) func() {
 	return func() {
 		log.Println("Start daily Download!!")
 		var viAll []*catch.VideoInfo
-		s := score.NewScore("./score/wordValue.txt")
+		s := score.NewScore("./score/wordValue.txt", "./score/ownValue.txt")
 		defer s.Free()
 	CRAWL:
 		for i := 1; i < 50; i++ {
@@ -141,6 +141,8 @@ func dailyFunc(proxyUrls []string) func() {
 				return
 			}
 			defer ddb.Close()
+
+			ddb.ClearDone(time.Now().Add(-time.Hour * 24 * 28))
 
 			viAll = ddb.DelRepeat(viAll)
 			s.GradeSort(viAll)
@@ -187,13 +189,13 @@ func main() {
 	//	panic(err1)
 	//}
 	//defer ddb.Close()
-	//
+
 	//viAll := catch.PageCrawl("http://91porn.com/index.php", "")
 	////ddb.AddDone(viAll)
 	//ddb.UpdateUD(viAll)
 	////viAll = ddb.DelRepeat(viAll)
 	//viAll = ddb.GetUD()
-	//
+	//ddb.ClearDone(time.Now().Add(-time.Hour*24*2 + time.Hour*10))
 	//return
 
 	proxyUrl := ""
@@ -210,6 +212,7 @@ func main() {
 
 	flag.Parse()
 
+	//TODO:增加单个页面的爬取功能。
 	if cpage == true {
 		path, _ := filepath.Abs(savePath)
 

@@ -13,15 +13,22 @@ import (
 type Score struct {
 	jieba    *gojieba.Jieba
 	keyValue map[string]int
+	ownValue map[string]int
 }
 
-func NewScore(keyFile string) *Score {
+func NewScore(keyFile, ownFile string) *Score {
 	mapKv := map[string]int{}
+	mapOv := map[string]int{}
 	x := gojieba.NewJieba()
 
 	data, err := ioutil.ReadFile(keyFile)
 	if err != nil {
 		fmt.Println("keyFile read fail:", err)
+	}
+
+	owndata, err := ioutil.ReadFile(ownFile)
+	if err != nil {
+		fmt.Println("ownFile read fail:", err)
 	}
 
 	for _, line := range strings.Split(string(data), "\n") {
@@ -40,7 +47,21 @@ func NewScore(keyFile string) *Score {
 
 	}
 
-	return &Score{x, mapKv}
+	for _, line := range strings.Split(string(owndata), "\n") {
+		strs := strings.Fields(line)
+		if len(strs) == 2 {
+			v, err := strconv.Atoi(strs[1])
+			if err != nil || v > 100 {
+				fmt.Println("wrong own value format!", strs)
+				continue
+			}
+			mapOv[strs[0]] = v
+		} else {
+			fmt.Println("wrong own value format!", strs)
+		}
+	}
+
+	return &Score{x, mapKv, mapOv}
 }
 
 func (s *Score) Free() {
@@ -50,7 +71,7 @@ func (s *Score) Free() {
 func (s *Score) Grade(info *catch.VideoInfo) float64 {
 
 	words := s.jieba.Cut(info.Title, true)
-	var titleScore, duraScore, viewScore float64
+	var titleScore, duraScore, ownScore float64
 	for _, w := range words {
 		titleScore += float64(s.keyValue[w])
 	}
@@ -60,9 +81,9 @@ func (s *Score) Grade(info *catch.VideoInfo) float64 {
 		duraScore = 100
 	}
 
-	viewScore = 0.0
+	ownScore = float64(s.ownValue[info.Owner])
 
-	finalScore := 0.4*titleScore + 0.4*duraScore + viewScore*0.2
+	finalScore := 0.4*titleScore + 0.4*duraScore + 0.2*ownScore
 
 	return finalScore
 }
