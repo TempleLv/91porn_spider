@@ -94,3 +94,12 @@ func (s *Score) GradeSort(vis []*catch.VideoInfo) {
 	}
 	sort.Sort(sort.Reverse(catch.ViSlice(vis)))
 }
+
+func (s *Score) Above(vis []*catch.VideoInfo, score float64) (above []*catch.VideoInfo) {
+	for _, vi := range vis {
+		if vi.Score > score {
+			above = append(above, vi)
+		}
+	}
+	return
+}

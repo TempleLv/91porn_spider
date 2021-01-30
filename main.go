@@ -54,7 +54,8 @@ func weeklyFunc(proxyUrls []string) func() {
 
 			viAll = ddb.DelRepeat(viAll)
 			s.GradeSort(viAll)
-			length := int(math.Min(30, float64(len(viAll))))
+			viAll = s.Above(viAll, 0)
+			length := int(math.Min(20, float64(len(viAll))))
 			pickVi := append(viAll[:length], ddb.GetUD()...)
 			savePath := time.Now().Format("./save/weekly_top_060102")
 
@@ -146,7 +147,8 @@ func dailyFunc(proxyUrls []string) func() {
 
 			viAll = ddb.DelRepeat(viAll)
 			s.GradeSort(viAll)
-			length := int(math.Min(40, float64(len(viAll))))
+			viAll = s.Above(viAll, 0)
+			length := int(math.Min(30, float64(len(viAll))))
 			pickVi := append(viAll[:length], ddb.GetUD()...)
 			savePath := time.Now().Format("./save/daily_060102")
 
