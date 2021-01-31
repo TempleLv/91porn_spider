@@ -2,8 +2,11 @@ package doneDB
 
 import (
 	"database/sql"
+	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"spider91/catch"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -58,7 +61,7 @@ func (v *VideoDB) DelRepeat(vis []*catch.VideoInfo) (pick []*catch.VideoInfo) {
 	return
 }
 
-func (v *VideoDB) UpdateUD(vis []*catch.VideoInfo) (fails []*catch.VideoInfo) {
+func (v *VideoDB) UpdateUD(vis []*catch.VideoInfo, done []*catch.VideoInfo) (fails []*catch.VideoInfo) {
 
 	for _, vi := range vis {
 		var count int64
@@ -99,6 +102,15 @@ func (v *VideoDB) UpdateUD(vis []*catch.VideoInfo) (fails []*catch.VideoInfo) {
 
 		fails = append(fails, vi)
 	}
+
+	var keys []string
+	for _, vi := range done {
+		keys = append(keys, strconv.Quote(vi.ViewKey))
+	}
+
+	sql := fmt.Sprintf("DELETE from undone WHERE viewkey IN (%s)", strings.Join(keys, ","))
+
+	v.db.Exec(sql)
 
 	return
 }

@@ -79,7 +79,7 @@ func weeklyFunc(proxyUrls []string) func() {
 				}
 			}
 			ddb.AddDone(pickVi)
-			ddb.UpdateUD(failVi)
+			ddb.UpdateUD(failVi, pickVi)
 			log.Printf("Download weekly top total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
 			for _, vi := range failVi {
 				log.Println("Download Fail!", vi.Title, vi.ViewKey)
@@ -172,7 +172,7 @@ func dailyFunc(proxyUrls []string) func() {
 				}
 			}
 			ddb.AddDone(pickVi)
-			ddb.UpdateUD(failVi)
+			ddb.UpdateUD(failVi, pickVi)
 			log.Printf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
 			for _, vi := range failVi {
 				log.Println("Download Fail!", vi.Title, vi.ViewKey)
@@ -191,10 +191,10 @@ func main() {
 	//	panic(err1)
 	//}
 	//defer ddb.Close()
-
+	//
 	//viAll := catch.PageCrawl("http://91porn.com/index.php", "")
 	////ddb.AddDone(viAll)
-	//ddb.UpdateUD(viAll)
+	//ddb.UpdateUD(viAll, viAll[:10])
 	////viAll = ddb.DelRepeat(viAll)
 	//viAll = ddb.GetUD()
 	//ddb.ClearDone(time.Now().Add(-time.Hour*24*2 + time.Hour*10))
