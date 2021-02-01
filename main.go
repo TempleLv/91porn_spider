@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math"
+	"net/smtp"
 	"os"
 	"path/filepath"
 	"spider91/catch"
@@ -17,6 +18,35 @@ import (
 	"strings"
 	"time"
 )
+
+func SendToMail(user, password, host, to, subject, content, mailtype string) error {
+	hp := strings.Split(host, ":")
+	auth := smtp.PlainAuth("", user, password, hp[0])
+	var content_type string
+	if mailtype == "html" {
+		content_type = "Content-Type: text/" + mailtype + "; charset=UTF-8"
+	} else {
+		content_type = "Content-Type: text/plain" + "; charset=UTF-8"
+	}
+	send_to := strings.Split(to, ";")
+	rfc822_to := strings.Join(send_to, ",")
+
+	body := `
+		<html>
+		<body>
+		<h3>
+		"%s"
+		</h3>
+		</body>
+		</html>
+		`
+	body = fmt.Sprintf(body, content)
+
+	msg := []byte("To: " + rfc822_to + "\r\nFrom: " + user + ">\r\nSubject: " + subject + "\r\n" + content_type + "\r\n\r\n" + body)
+
+	err := smtp.SendMail(host, auth, user, send_to, msg)
+	return err
+}
 
 func weeklyFunc(proxyUrls []string) func() {
 	proxyUrls = append([]string{}, proxyUrls...)
@@ -84,8 +114,43 @@ func weeklyFunc(proxyUrls []string) func() {
 			for _, vi := range failVi {
 				log.Println("Download Fail!", vi.Title, vi.ViewKey)
 			}
+
+			if len(failVi) > 5 {
+				user := "noticeltp@126.com"
+				password := "GGVTFZXOJKFJDDWV"
+				host := "smtp.126.com:25"
+				to := "442990922@qq.com"
+
+				subject := fmt.Sprintf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
+				content := fmt.Sprintf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
+
+				err := SendToMail(user, password, host, to, subject, content, "html")
+				if err != nil {
+					log.Println("Send mail error!")
+					log.Println(err)
+				} else {
+					log.Println("Send mail success!")
+				}
+			}
+
 		} else {
 			log.Println("No top page was crawled!!!")
+
+			user := "noticeltp@126.com"
+			password := "GGVTFZXOJKFJDDWV"
+			host := "smtp.126.com:25"
+			to := "442990922@qq.com"
+
+			subject := "No page was crawled!!!"
+			content := "No page was crawled!!!"
+
+			err := SendToMail(user, password, host, to, subject, content, "html")
+			if err != nil {
+				log.Println("Send mail error!")
+				log.Println(err)
+			} else {
+				log.Println("Send mail success!")
+			}
 		}
 
 		savePath := time.Now().Format("./save/weekly_060102")
@@ -177,8 +242,43 @@ func dailyFunc(proxyUrls []string) func() {
 			for _, vi := range failVi {
 				log.Println("Download Fail!", vi.Title, vi.ViewKey)
 			}
+
+			if len(failVi) > 5 {
+				user := "noticeltp@126.com"
+				password := "GGVTFZXOJKFJDDWV"
+				host := "smtp.126.com:25"
+				to := "442990922@qq.com"
+
+				subject := fmt.Sprintf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
+				content := fmt.Sprintf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
+
+				err := SendToMail(user, password, host, to, subject, content, "html")
+				if err != nil {
+					log.Println("Send mail error!")
+					log.Println(err)
+				} else {
+					log.Println("Send mail success!")
+				}
+			}
 		} else {
 			log.Println("No page was crawled!!!")
+
+			user := "noticeltp@126.com"
+			password := "GGVTFZXOJKFJDDWV"
+			host := "smtp.126.com:25"
+			to := "442990922@qq.com"
+
+			subject := "No page was crawled!!!"
+			content := "No page was crawled!!!"
+
+			err := SendToMail(user, password, host, to, subject, content, "html")
+			if err != nil {
+				log.Println("Send mail error!")
+				log.Println(err)
+			} else {
+				log.Println("Send mail success!")
+			}
+
 		}
 
 	}
