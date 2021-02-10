@@ -103,14 +103,16 @@ func (v *VideoDB) UpdateUD(vis []*catch.VideoInfo, done []*catch.VideoInfo) (fai
 		fails = append(fails, vi)
 	}
 
-	var keys []string
-	for _, vi := range done {
-		keys = append(keys, strconv.Quote(vi.ViewKey))
+	if len(done) > 0 {
+		var keys []string
+		for _, vi := range done {
+			keys = append(keys, strconv.Quote(vi.ViewKey))
+		}
+
+		sql := fmt.Sprintf("DELETE from undone WHERE viewkey IN (%s)", strings.Join(keys, ","))
+
+		v.db.Exec(sql)
 	}
-
-	sql := fmt.Sprintf("DELETE from undone WHERE viewkey IN (%s)", strings.Join(keys, ","))
-
-	v.db.Exec(sql)
 
 	return
 }
