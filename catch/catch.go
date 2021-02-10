@@ -89,7 +89,7 @@ func (v VideoInfo) Download(savePath string, numThread int, proxy string) (err e
 
 	if len(v.DlAddr) > 0 {
 		//strCmd := fmt.Sprintf(" -p \"%s\" -t %d -w -o %s \"%s\"", proxy, numThread, savePath, v.DlAddr)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*2+time.Second*30)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*3+time.Second*30)
 		defer cancel()
 		cmd := exec.CommandContext(ctx, "m3_dl", "-p", proxy, "-t", strconv.Itoa(numThread), "-w", "-o", savePath, v.DlAddr)
 
@@ -315,9 +315,10 @@ func DownloadMany(viAll []*VideoInfo, numThread int, proxyUrl, savePath string) 
 			chq <- 1
 			info.updateDlAddr(proxyUrl)
 			savePath := filepath.Join(savePath, fmt.Sprintf("%s(%s).ts", info.Title, info.Owner))
-			err := info.Download(savePath, 10, proxyUrl)
+			err := info.Download(savePath, 8, proxyUrl)
 			if err != nil {
 				failVi = append(failVi, info)
+				os.Remove(savePath)
 			}
 			<-chq
 			ch <- 1

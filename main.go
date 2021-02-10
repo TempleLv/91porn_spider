@@ -164,7 +164,7 @@ func dailyFunc(proxyUrls []string) func() {
 
 			failVi := pickVi
 			for _, pu := range proxyUrls {
-				failVi = catch.DownloadMany(failVi, 5, pu, path)
+				failVi = catch.DownloadMany(failVi, 3, pu, path)
 				if len(failVi) == 0 {
 					break
 				} else {
