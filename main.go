@@ -100,8 +100,11 @@ func weeklyFunc(proxyUrls []string) func() {
 			}
 
 			failVi := pickVi
+			var succsVi []*catch.VideoInfo
 			for _, pu := range proxyUrls {
-				failVi = catch.DownloadMany(failVi, 5, pu, path)
+				var ssc []*catch.VideoInfo
+				failVi, ssc = catch.DownloadMany(failVi, 3, pu, path)
+				succsVi = append(succsVi, ssc...)
 				if len(failVi) == 0 {
 					break
 				} else {
@@ -109,8 +112,8 @@ func weeklyFunc(proxyUrls []string) func() {
 				}
 			}
 			ddb.AddDone(pickVi)
-			ddb.UpdateUD(failVi, pickVi)
-			log.Printf("Download weekly top total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
+			ddb.UpdateUD(failVi, succsVi)
+			log.Printf("Download weekly top total:%d, success %d, fail %d.\n", len(pickVi), len(succsVi), len(failVi))
 			for _, vi := range failVi {
 				log.Println("Download Fail!", vi.Title, vi.ViewKey)
 			}
@@ -228,8 +231,11 @@ func dailyFunc(proxyUrls []string) func() {
 			}
 
 			failVi := pickVi
+			var succsVi []*catch.VideoInfo
 			for _, pu := range proxyUrls {
-				failVi = catch.DownloadMany(failVi, 3, pu, path)
+				var ssc []*catch.VideoInfo
+				failVi, ssc = catch.DownloadMany(failVi, 3, pu, path)
+				succsVi = append(succsVi, ssc...)
 				if len(failVi) == 0 {
 					break
 				} else {
@@ -237,8 +243,8 @@ func dailyFunc(proxyUrls []string) func() {
 				}
 			}
 			ddb.AddDone(pickVi)
-			ddb.UpdateUD(failVi, pickVi)
-			log.Printf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
+			ddb.UpdateUD(failVi, succsVi)
+			log.Printf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(succsVi), len(failVi))
 			for _, vi := range failVi {
 				log.Println("Download Fail!", vi.Title, vi.ViewKey)
 			}

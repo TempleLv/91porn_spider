@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -306,10 +307,11 @@ func OrgPageSave(dstUrl, proxyUrl, fileName string) {
 	file.Write(buf)
 }
 
-func DownloadMany(viAll []*VideoInfo, numThread int, proxyUrl, savePath string) (failVi []*VideoInfo) {
+func DownloadMany(viAll []*VideoInfo, numThread int, proxyUrl, savePath string) (failVi, succsVi []*VideoInfo) {
 	ch := make(chan int, len(viAll))
 	chq := make(chan int, numThread)
 	fmt.Print("DownladMany:len([]*VideoInfo)=", len(viAll), "\n")
+	var mutex sync.Mutex
 	for _, vi := range viAll {
 		go func(info *VideoInfo) {
 			chq <- 1
@@ -317,9 +319,16 @@ func DownloadMany(viAll []*VideoInfo, numThread int, proxyUrl, savePath string) 
 			savePath := filepath.Join(savePath, fmt.Sprintf("%s(%s).ts", info.Title, info.Owner))
 			err := info.Download(savePath, 25, proxyUrl)
 			if err != nil {
+				mutex.Lock()
 				failVi = append(failVi, info)
+				mutex.Unlock()
 				os.Remove(savePath)
+			} else {
+				mutex.Lock()
+				succsVi = append(succsVi, info)
+				mutex.Unlock()
 			}
+
 			<-chq
 			ch <- 1
 		}(vi)
