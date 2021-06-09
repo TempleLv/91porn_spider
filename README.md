@@ -15,7 +15,9 @@
  pip3 install m3_dl  
  pip3 install pysocks  
 3.  编译代码  
-工程根目录下执行go build
+工程根目录下执行
+go mod tidy
+go build
 
 
 #### 使用说明
