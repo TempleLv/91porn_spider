@@ -103,7 +103,7 @@ func weeklyFunc(proxyUrls []string) func() {
 			var succsVi []*catch.VideoInfo
 			for _, pu := range proxyUrls {
 				var ssc []*catch.VideoInfo
-				failVi, ssc = catch.DownloadMany(failVi, 3, pu, path)
+				failVi, ssc = catch.DownloadMany(failVi, 2, pu, path)
 				succsVi = append(succsVi, ssc...)
 				if len(failVi) == 0 {
 					break
@@ -234,7 +234,7 @@ func dailyFunc(proxyUrls []string) func() {
 			var succsVi []*catch.VideoInfo
 			for _, pu := range proxyUrls {
 				var ssc []*catch.VideoInfo
-				failVi, ssc = catch.DownloadMany(failVi, 3, pu, path)
+				failVi, ssc = catch.DownloadMany(failVi, 2, pu, path)
 				succsVi = append(succsVi, ssc...)
 				if len(failVi) == 0 {
 					break
