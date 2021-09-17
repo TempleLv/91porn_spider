@@ -188,14 +188,14 @@ func dailyFunc(proxyUrls []string) func() {
 		for i := 1; i < 50; i++ {
 			var vis []*catch.VideoInfo
 			for _, pu := range proxyUrls {
-				vis = catch.PageCrawl("http://91porn.com/v.php?next=watch&page="+strconv.Itoa(i), pu)
+				vis = catch.PageCrawl_chromedp("http://91porn.com/v.php?next=watch&page="+strconv.Itoa(i), pu)
 				if len(vis) > 0 {
 					break
 				}
 			}
 
 			for _, vi := range vis {
-				if time.Now().Sub(vi.UpTime) < time.Hour*24+time.Minute*10 {
+				if time.Now().Sub(vi.UpTime) < time.Hour*30+time.Minute*10 {
 					viAll = append(viAll, vi)
 				} else {
 					break CRAWL
@@ -290,6 +290,74 @@ func dailyFunc(proxyUrls []string) func() {
 	}
 }
 
+func dbFunc(proxyUrls []string) func() {
+	proxyUrls = append([]string{}, proxyUrls...)
+	return func() {
+		var viAll []*catch.VideoInfo
+
+		ddb, err := doneDB.OpenVDB("./save/videoDB.db")
+		if err != nil {
+			log.Println("videoDB.db open fail!!!", err)
+			return
+		}
+		defer ddb.Close()
+
+		ddb.ClearDone(time.Now().Add(-time.Hour * 24 * 28))
+
+		viAll = ddb.DelRepeat(viAll)
+		length := int(math.Min(30, float64(len(viAll))))
+		pickVi := append(viAll[:length], ddb.GetUD()...)
+		savePath := time.Now().Format("./save/daily_060102")
+
+		path, _ := filepath.Abs(savePath)
+
+		_, err = os.Stat(path)
+		if os.IsNotExist(err) {
+			if err = os.MkdirAll(path, os.ModePerm); err != nil {
+				log.Println("savePath create failed!", err)
+				return
+			}
+		}
+
+		failVi := pickVi
+		var succsVi []*catch.VideoInfo
+		for _, pu := range proxyUrls {
+			var ssc []*catch.VideoInfo
+			failVi, ssc = catch.DownloadMany(failVi, 3, pu, path)
+			succsVi = append(succsVi, ssc...)
+			if len(failVi) == 0 {
+				break
+			} else {
+				log.Printf("proxy:%s left %d items\n", pu, len(failVi))
+			}
+		}
+		ddb.AddDone(pickVi)
+		ddb.UpdateUD(failVi, succsVi)
+		log.Printf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(succsVi), len(failVi))
+		for _, vi := range failVi {
+			log.Println("Download Fail!", vi.Title, vi.ViewKey)
+		}
+
+		if len(failVi) > 5 {
+			user := "noticeltp@126.com"
+			password := "DFLZATKXXAIVXJDU"
+			host := "smtp.126.com:25"
+			to := "442990922@qq.com"
+
+			subject := fmt.Sprintf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
+			content := fmt.Sprintf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
+
+			err := SendToMail(user, password, host, to, subject, content, "html")
+			if err != nil {
+				log.Println("Send mail error!")
+				log.Println(err)
+			} else {
+				log.Println("Send mail success!")
+			}
+		}
+	}
+}
+
 func main() {
 
 	//ddb, err1 := doneDB.OpenVDB("./save/videoDB.db")
@@ -314,14 +382,32 @@ func main() {
 	savePath := ""
 	threadNum := 5
 	cpage := false
+	now := false
+	db_left := false
 
 	flag.StringVar(&proxyUrl, "p", "", "proxy")
 	flag.StringVar(&pageUrl, "u", "http://91porn.com/index.php", "page to crawl")
 	flag.StringVar(&savePath, "o", "./save", "path to output")
 	flag.IntVar(&threadNum, "t", 5, "threadcount")
 	flag.BoolVar(&cpage, "c", false, "crawl whole page")
+	flag.BoolVar(&now, "now", false, "24h favourite porn")
+	flag.BoolVar(&db_left, "db", false, "download left db porn")
 
 	flag.Parse()
+
+	proxyUrls := []string{
+		"socks5://192.168.3.254:1081",
+		"socks5://192.168.3.254:1082",
+		"socks5://192.168.3.254:1083",
+		"socks5://192.168.3.254:1084",
+		"socks5://192.168.3.254:1085",
+		"socks5://192.168.3.254:1086",
+		"socks5://192.168.3.254:1087",
+		"socks5://192.168.3.254:1088",
+		"socks5://192.168.3.254:1089",
+		"socks5://192.168.3.254:1090",
+		"socks5://192.168.3.254:1091",
+	}
 
 	if cpage == true {
 		path, _ := filepath.Abs(savePath)
@@ -346,6 +432,16 @@ func main() {
 
 			catch.DownloadMany(viAll, threadNum, proxyUrl, path)
 		}
+
+		return
+	} else if db_left == true {
+
+		dbFunc(proxyUrls)()
+
+		return
+	} else if now == true {
+
+		dailyFunc(proxyUrls)()
 
 		return
 	}
@@ -373,13 +469,8 @@ func main() {
 
 	c := cron.New(cron.WithSeconds())
 
-	proxyUrls := []string{
-		"",
-		"socks5://192.168.3.254:10808",
-	}
-
-	c.AddFunc("00 00 04 * * 6", weeklyFunc(proxyUrls))
-	c.AddFunc("00 00 03 * * *", dailyFunc(proxyUrls))
+	c.AddFunc("00 00 09 * * 6", weeklyFunc(proxyUrls))
+	c.AddFunc("00 00 08 * * *", dailyFunc(proxyUrls))
 
 	c.Start()
 	defer c.Stop()
