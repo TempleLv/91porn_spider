@@ -8,45 +8,16 @@ import (
 	"io/ioutil"
 	"log"
 	"math"
-	"net/smtp"
 	"os"
 	"path/filepath"
 	"spider91/catch"
 	"spider91/doneDB"
+	"spider91/mailSend"
 	"spider91/score"
 	"strconv"
 	"strings"
 	"time"
 )
-
-func SendToMail(user, password, host, to, subject, content, mailtype string) error {
-	hp := strings.Split(host, ":")
-	auth := smtp.PlainAuth("", user, password, hp[0])
-	var content_type string
-	if mailtype == "html" {
-		content_type = "Content-Type: text/" + mailtype + "; charset=UTF-8"
-	} else {
-		content_type = "Content-Type: text/plain" + "; charset=UTF-8"
-	}
-	send_to := strings.Split(to, ";")
-	rfc822_to := strings.Join(send_to, ",")
-
-	body := `
-		<html>
-		<body>
-		<h3>
-		"%s"
-		</h3>
-		</body>
-		</html>
-		`
-	body = fmt.Sprintf(body, content)
-
-	msg := []byte("To: " + rfc822_to + "\r\nFrom: " + user + ">\r\nSubject: " + subject + "\r\n" + content_type + "\r\n\r\n" + body)
-
-	err := smtp.SendMail(host, auth, user, send_to, msg)
-	return err
-}
 
 func weeklyFunc(proxyUrls []string) func() {
 	proxyUrls = append([]string{}, proxyUrls...)
@@ -61,7 +32,7 @@ func weeklyFunc(proxyUrls []string) func() {
 		for i := 1; i < 6; i++ {
 			var vis []*catch.VideoInfo
 			for _, pu := range proxyUrls {
-				vis = catch.PageCrawl("http://91porn.com/v.php?category=rf&viewtype=basic&page="+strconv.Itoa(i), pu)
+				vis = catch.PageCrawl_chromedp("http://91porn.com/v.php?category=rf&viewtype=basic&page="+strconv.Itoa(i), pu)
 				if len(vis) > 0 {
 					break
 				}
@@ -119,15 +90,11 @@ func weeklyFunc(proxyUrls []string) func() {
 			}
 
 			if len(failVi) > 5 {
-				user := "noticeltp@126.com"
-				password := "GGVTFZXOJKFJDDWV"
-				host := "smtp.126.com:25"
-				to := "442990922@qq.com"
 
 				subject := fmt.Sprintf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
 				content := fmt.Sprintf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
 
-				err := SendToMail(user, password, host, to, subject, content, "html")
+				err := mailSend.SendMailByYaml(subject, content, "html")
 				if err != nil {
 					log.Println("Send mail error!")
 					log.Println(err)
@@ -139,15 +106,10 @@ func weeklyFunc(proxyUrls []string) func() {
 		} else {
 			log.Println("No top page was crawled!!!")
 
-			user := "noticeltp@126.com"
-			password := "GGVTFZXOJKFJDDWV"
-			host := "smtp.126.com:25"
-			to := "442990922@qq.com"
-
 			subject := "No page was crawled!!!"
 			content := "No page was crawled!!!"
 
-			err := SendToMail(user, password, host, to, subject, content, "html")
+			err := mailSend.SendMailByYaml(subject, content, "html")
 			if err != nil {
 				log.Println("Send mail error!")
 				log.Println(err)
@@ -250,15 +212,11 @@ func dailyFunc(proxyUrls []string) func() {
 			}
 
 			if len(failVi) > 5 {
-				user := "noticeltp@126.com"
-				password := "GGVTFZXOJKFJDDWV"
-				host := "smtp.126.com:25"
-				to := "442990922@qq.com"
 
 				subject := fmt.Sprintf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
 				content := fmt.Sprintf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
 
-				err := SendToMail(user, password, host, to, subject, content, "html")
+				err := mailSend.SendMailByYaml(subject, content, "html")
 				if err != nil {
 					log.Println("Send mail error!")
 					log.Println(err)
@@ -269,15 +227,10 @@ func dailyFunc(proxyUrls []string) func() {
 		} else {
 			log.Println("No page was crawled!!!")
 
-			user := "noticeltp@126.com"
-			password := "GGVTFZXOJKFJDDWV"
-			host := "smtp.126.com:25"
-			to := "442990922@qq.com"
-
 			subject := "No page was crawled!!!"
 			content := "No page was crawled!!!"
 
-			err := SendToMail(user, password, host, to, subject, content, "html")
+			err := mailSend.SendMailByYaml(subject, content, "html")
 			if err != nil {
 				log.Println("Send mail error!")
 				log.Println(err)
@@ -339,15 +292,11 @@ func dbFunc(proxyUrls []string) func() {
 		}
 
 		if len(failVi) > 5 {
-			user := "noticeltp@126.com"
-			password := "DFLZATKXXAIVXJDU"
-			host := "smtp.126.com:25"
-			to := "442990922@qq.com"
 
 			subject := fmt.Sprintf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
 			content := fmt.Sprintf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
 
-			err := SendToMail(user, password, host, to, subject, content, "html")
+			err := mailSend.SendMailByYaml(subject, content, "html")
 			if err != nil {
 				log.Println("Send mail error!")
 				log.Println(err)
@@ -377,6 +326,13 @@ func main() {
 	//catch.PageCrawlOne("http://91porn.com/view_video.php?viewkey=8cd0148b3fe08d4a4c2f&page=3&viewtype=basic&category=rf", "http://192.168.4.66:10808")
 	//return
 
+	//subject := "No page was crawled!!!"
+	//content := "No page was crawled!!!"
+	//
+	// mailSend.SendMailByYaml(subject, content, "html")
+	//
+	//return
+
 	proxyUrl := ""
 	pageUrl := ""
 	savePath := ""
@@ -384,6 +340,7 @@ func main() {
 	cpage := false
 	now := false
 	db_left := false
+	week := false
 
 	flag.StringVar(&proxyUrl, "p", "", "proxy")
 	flag.StringVar(&pageUrl, "u", "http://91porn.com/index.php", "page to crawl")
@@ -392,6 +349,7 @@ func main() {
 	flag.BoolVar(&cpage, "c", false, "crawl whole page")
 	flag.BoolVar(&now, "now", false, "24h favourite porn")
 	flag.BoolVar(&db_left, "db", false, "download left db porn")
+	flag.BoolVar(&week, "week", false, "week favourite porn")
 
 	flag.Parse()
 
@@ -428,7 +386,7 @@ func main() {
 			}
 
 		} else {
-			viAll := catch.PageCrawl(pageUrl, proxyUrl)
+			viAll := catch.PageCrawl_chromedp(pageUrl, proxyUrl)
 
 			catch.DownloadMany(viAll, threadNum, proxyUrl, path)
 		}
@@ -442,6 +400,11 @@ func main() {
 	} else if now == true {
 
 		dailyFunc(proxyUrls)()
+
+		return
+	} else if week == true {
+
+		weeklyFunc(proxyUrls)()
 
 		return
 	}

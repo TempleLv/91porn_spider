@@ -9,4 +9,5 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.6
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/yanyiwu/gojieba v1.1.2
+	gopkg.in/yaml.v2 v2.4.0
 )
