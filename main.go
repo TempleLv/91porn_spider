@@ -243,6 +243,110 @@ func dailyFunc(proxyUrls []string) func() {
 	}
 }
 
+func nowFunc(days, count int, proxyUrls []string) func() {
+	proxyUrls = append([]string{}, proxyUrls...)
+	return func() {
+		log.Printf("Start %d days Download, count %d!!\n", days, count)
+		var viAll []*catch.VideoInfo
+		s := score.NewScore("./score/wordValue.txt", "./score/ownValue.txt")
+		defer s.Free()
+	CRAWL:
+		for i := 1; i < days*20; i++ {
+			var vis []*catch.VideoInfo
+			for _, pu := range proxyUrls {
+				vis = catch.PageCrawl_chromedp("http://91porn.com/v.php?next=watch&page="+strconv.Itoa(i), pu)
+				if len(vis) > 0 {
+					break
+				}
+			}
+
+			for _, vi := range vis {
+				if time.Now().Sub(vi.UpTime) < time.Hour*24*time.Duration(days) {
+					viAll = append(viAll, vi)
+				} else {
+					break CRAWL
+				}
+			}
+		}
+
+		if len(viAll) > 0 {
+			ddb, err := doneDB.OpenVDB("./save/videoDB.db")
+			if err != nil {
+				log.Println("videoDB.db open fail!!!", err)
+				return
+			}
+			defer ddb.Close()
+
+			ddb.ClearDone(time.Now().Add(-time.Hour * 24 * 28))
+
+			viAll = ddb.DelRepeat(viAll)
+			s.GradeSort(viAll)
+			viAll = s.Above(viAll, 0)
+			length := int(math.Min(float64(count), float64(len(viAll))))
+			pickVi := append(viAll[:length], ddb.GetUD()...)
+			savePath := time.Now().Format("./save/ext_060102") + fmt.Sprintf("_%ddays", days)
+
+			path, _ := filepath.Abs(savePath)
+
+			_, err = os.Stat(path)
+			if os.IsNotExist(err) {
+				if err = os.MkdirAll(path, os.ModePerm); err != nil {
+					log.Println("savePath create failed!", err)
+					return
+				}
+			}
+
+			failVi := pickVi
+			var succsVi []*catch.VideoInfo
+			for _, pu := range proxyUrls {
+				var ssc []*catch.VideoInfo
+				failVi, ssc = catch.DownloadMany(failVi, 3, pu, path)
+				succsVi = append(succsVi, ssc...)
+				if len(failVi) == 0 {
+					break
+				} else {
+					log.Printf("proxy:%s left %d items\n", pu, len(failVi))
+				}
+			}
+			ddb.AddDone(pickVi)
+			ddb.UpdateUD(failVi, succsVi)
+			log.Printf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(succsVi), len(failVi))
+			for _, vi := range failVi {
+				log.Println("Download Fail!", vi.Title, vi.ViewKey)
+			}
+
+			if len(failVi) > 5 {
+
+				subject := fmt.Sprintf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
+				content := fmt.Sprintf("Download total:%d, success %d, fail %d.\n", len(pickVi), len(pickVi)-len(failVi), len(failVi))
+
+				err := mailSend.SendMailByYaml(subject, content, "html")
+				if err != nil {
+					log.Println("Send mail error!")
+					log.Println(err)
+				} else {
+					log.Println("Send mail success!")
+				}
+			}
+		} else {
+			log.Println("No page was crawled!!!")
+
+			subject := "No page was crawled!!!"
+			content := "No page was crawled!!!"
+
+			err := mailSend.SendMailByYaml(subject, content, "html")
+			if err != nil {
+				log.Println("Send mail error!")
+				log.Println(err)
+			} else {
+				log.Println("Send mail success!")
+			}
+
+		}
+
+	}
+}
+
 func dbFunc(proxyUrls []string) func() {
 	proxyUrls = append([]string{}, proxyUrls...)
 	return func() {
@@ -338,7 +442,8 @@ func main() {
 	savePath := ""
 	threadNum := 5
 	cpage := false
-	now := false
+	now := -1
+	nCount := -1
 	db_left := false
 	week := false
 
@@ -347,13 +452,15 @@ func main() {
 	flag.StringVar(&savePath, "o", "./save", "path to output")
 	flag.IntVar(&threadNum, "t", 5, "threadcount")
 	flag.BoolVar(&cpage, "c", false, "crawl whole page")
-	flag.BoolVar(&now, "now", false, "24h favourite porn")
+	flag.IntVar(&now, "now", -1, "n days favourite porn")
+	flag.IntVar(&nCount, "n", -1, "Download quantity, used with now.")
 	flag.BoolVar(&db_left, "db", false, "download left db porn")
 	flag.BoolVar(&week, "week", false, "week favourite porn")
 
 	flag.Parse()
 
 	proxyUrls := []string{
+		//"socks5://127.0.0.1:7890",
 		"socks5://192.168.3.254:1081",
 		"socks5://192.168.3.254:1082",
 		"socks5://192.168.3.254:1083",
@@ -397,9 +504,9 @@ func main() {
 		dbFunc(proxyUrls)()
 
 		return
-	} else if now == true {
+	} else if now > 0 && nCount > 0 {
 
-		dailyFunc(proxyUrls)()
+		nowFunc(now, nCount, proxyUrls)()
 
 		return
 	} else if week == true {
