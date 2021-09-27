@@ -1,9 +1,11 @@
 package catch
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"io/ioutil"
 	"net/http"
@@ -69,7 +71,7 @@ func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
 	defer cancel()
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
-	ctx, _ = context.WithTimeout(ctx, time.Second*15)
+	ctx, _ = context.WithTimeout(ctx, time.Second*10)
 
 	htmlText := ""
 	fullUrl := "https://www.91porn.com/view_video.php?viewkey=" + v.ViewKey
@@ -115,24 +117,47 @@ func (v VideoInfo) Download(savePath string, numThread int, proxy string) (err e
 
 func sourHtml(urlstr, sel string, html *string) chromedp.Tasks {
 	return chromedp.Tasks{
+		network.Enable(),
+		network.SetExtraHTTPHeaders(network.Headers(map[string]interface{}{
+			"Accept-Language": "zh-CN,zh;q=0.9",
+		})),
 		chromedp.Navigate(urlstr),
 		//chromedp.WaitVisible(sel),
 		//chromedp.Text("source src", html),
 		//chromedp.ActionFunc(func(ctx context.Context) error {
 		//	return nil
 		//}),
+		chromedp.Click("body > table > tbody > tr > td > a", chromedp.ByQuery),
 		chromedp.OuterHTML(sel, html),
 	}
 }
 
 func sourManyHtml(urlstr string, sel, html []string) chromedp.Tasks {
 	task := chromedp.Tasks{
+		network.Enable(),
+		network.SetExtraHTTPHeaders(network.Headers(map[string]interface{}{
+			"Accept-Language": "zh-CN,zh;q=0.9",
+		})),
 		chromedp.Navigate(urlstr),
 	}
 	if len(sel) == len(html) {
 		for i, _ := range sel {
 			task = append(task, chromedp.OuterHTML(sel[i], &html[i]))
 		}
+	}
+
+	return task
+}
+
+func nopCrawHtml(urlstr string, sel string, html *string) chromedp.Tasks {
+	task := chromedp.Tasks{
+		network.Enable(),
+		network.SetExtraHTTPHeaders(network.Headers(map[string]interface{}{
+			"Accept-Language": "zh-CN,zh;q=0.9",
+		})),
+		chromedp.Navigate(urlstr),
+		chromedp.Click("body > table > tbody > tr > td > a", chromedp.ByQuery),
+		chromedp.OuterHTML(sel, html),
 	}
 
 	return task
@@ -177,6 +202,100 @@ func PageCrawlOne(dstUrl, proxyUrl string) (vi VideoInfo, err error) {
 	return
 }
 
+func PageCrawl_chromedp(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
+	options := []chromedp.ExecAllocatorOption{
+		chromedp.Flag("hide-scrollbars", false),
+		chromedp.Flag("mute-audio", false),
+		chromedp.Flag("blink-settings", "imagesEnabled=false"),
+		chromedp.ProxyServer(proxyUrl),
+		//chromedp.Flag("headless", false),
+		//chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"),
+	}
+	options = append(chromedp.DefaultExecAllocatorOptions[:], options...)
+
+	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), options...)
+	defer cancel()
+	ctx, cancel := chromedp.NewContext(allocCtx)
+	defer cancel()
+	ctx, _ = context.WithTimeout(ctx, time.Second*25)
+
+	sel := "#wrapper"
+	htmlText := ""
+	if err := chromedp.Run(ctx, nopCrawHtml(dstUrl, sel, &htmlText)); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	doc, err := goquery.NewDocumentFromReader(bytes.NewBufferString(htmlText))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	doc.Find("#wrapper > div.container.container-minheight > div.row > div > div > div > div").Each(func(i int, selection *goquery.Selection) {
+		textStr := selection.Text()
+
+		title := selection.Find("a").Find("span.video-title").Text()
+		videoUrl, urlOk := selection.Find("a").Attr("href")
+
+		regViewKey := regexp.MustCompile(`91porn.com/view_video.php\?viewkey=(?s:(.*?))&page`)
+		regAddTime := regexp.MustCompile(`添加时间:(?s:(.*?))\n`)
+		regWatch := regexp.MustCompile(`查看:(?s:(.*?))\n`)
+		regCollect := regexp.MustCompile(`收藏:(?s:(.*?))\n`)
+		regOwner := regexp.MustCompile(`作者: \n(?s:(.*?))\n`)
+
+		viewkey := regViewKey.FindAllStringSubmatch(videoUrl, 1)
+		addTime := regAddTime.FindAllStringSubmatch(textStr, 1)
+		watch := regWatch.FindAllStringSubmatch(textStr, 1)
+		collect := regCollect.FindAllStringSubmatch(textStr, 1)
+		owner := regOwner.FindAllStringSubmatch(textStr, 1)
+
+		if len(viewkey) > 0 && len(addTime) > 0 && len(watch) > 0 && len(collect) > 0 && len(owner) > 0 && urlOk {
+
+			vi := new(VideoInfo)
+
+			//title = "1"
+			strs := strings.Fields(addTime[0][1])
+
+			if len(strs) == 3 {
+				switch strs[1] {
+				case "分钟":
+					duration, _ := time.ParseDuration("-" + strs[0] + "m")
+					vi.UpTime = time.Now().Add(duration)
+				case "小时":
+					duration, _ := time.ParseDuration("-" + strs[0] + "h")
+					vi.UpTime = time.Now().Add(duration)
+				case "天":
+					hourDay, _ := strconv.Atoi(strs[0])
+					hourDay = hourDay * 24
+					duration, _ := time.ParseDuration("-" + strconv.Itoa(hourDay) + "h")
+					vi.UpTime = time.Now().Add(duration)
+				}
+			}
+			vi.Title = title
+			vi.ViewKey = viewkey[0][1]
+			strs = strings.Fields(watch[0][1])
+			vi.Watch, _ = strconv.Atoi(strs[0])
+			strs = strings.Fields(collect[0][1])
+			if len(strs) > 0 {
+				vi.Collect, _ = strconv.Atoi(strs[0])
+			}
+			vi.Owner = strings.Fields(owner[0][1])[0]
+			vMinute := 0
+			vSecond := 0
+			fmt.Sscanf(selection.Find("span.duration").Text(), "%d:%d\n", &vMinute, &vSecond)
+			vi.Vdurat = float64(vMinute) + float64(vSecond)/60.0
+
+			viAll = append(viAll, vi)
+
+			//fmt.Println(vi)
+		}
+
+	})
+
+	return
+}
+
 func PageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 	req, err := http.NewRequest("GET", dstUrl, nil)
 	if err != nil {
@@ -184,8 +303,28 @@ func PageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 		return
 	}
 
+	req.Header.Add("Connection", "keep-alive")
 	req.Header.Add("Accept-Language", "zh-CN,zh;q=0.9")
-	req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:12.0) Gecko/20100101 Firefox/12.0")
+	req.Header.Add("sec-ch-ua", "\" Not;A Brand\";v=\"99\", \"Google Chrome\";v=\"91\", \"Chromium\";v=\"91\"")
+	req.Header.Add("sec-ch-ua-mobile", "?0")
+	req.Header.Add("Upgrade-Insecure-Requests", "1")
+	req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+	req.Header.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
+	req.Header.Add("Sec-Fetch-Site", "none")
+	req.Header.Add("Sec-Fetch-Mode", "navigate")
+	req.Header.Add("Sec-Fetch-User", "?1")
+	req.Header.Add("Sec-Fetch-Dest", "document")
+	req.Header.Add("Accept-Encoding", " gzip, deflate, br")
+	//req.Header.Add("", "")
+
+	//req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:12.0) Gecko/20100101 Firefox/12.0")
+
+	//req.Header.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
+	//req.Header.Add("Accept-Encoding", "gzip, deflate")
+	//req.Header.Add("Accept-Language", "zh-cn,zh;q=0.8,en-us;q=0.5,en;q=0.3")
+
+	//req.Header.Add("Upgrade-Insecure-Requests", "1")
+	//req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
 
 	client := &http.Client{}
 
@@ -256,7 +395,9 @@ func PageCrawl(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 			strs = strings.Fields(watch[0][1])
 			vi.Watch, _ = strconv.Atoi(strs[0])
 			strs = strings.Fields(collect[0][1])
-			vi.Collect, _ = strconv.Atoi(strs[0])
+			if len(strs) > 0 {
+				vi.Collect, _ = strconv.Atoi(strs[0])
+			}
 			vi.Owner = strings.Fields(owner[0][1])[0]
 			vMinute := 0
 			vSecond := 0

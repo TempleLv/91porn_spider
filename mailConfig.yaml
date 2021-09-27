@@ -1,0 +1,4 @@
+user : sender@126.com
+password : XXXXXXXXXXXX
+host : smtp.126.com:25
+addr : receiver@qq.com
