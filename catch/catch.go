@@ -63,7 +63,7 @@ func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
 		chromedp.Flag("blink-settings", "imagesEnabled=false"),
 		chromedp.ProxyServer(proxy),
 		//chromedp.Flag("headless", false),
-		//chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3830.0 Safari/537.36"),
+		chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"),
 	}
 	options = append(chromedp.DefaultExecAllocatorOptions[:], options...)
 
@@ -76,8 +76,10 @@ func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
 	htmlText := ""
 	fullUrl := "https://www.91porn.com/view_video.php?viewkey=" + v.ViewKey
 	if err = chromedp.Run(ctx, sourHtml(fullUrl, "#player_one_html5_api > source", &htmlText)); err != nil {
-		fmt.Println(err)
+		fmt.Println("DlAddr", fullUrl, err)
 		return
+	} else {
+		fmt.Println(fullUrl, "DlAddr done!")
 	}
 	regAddr := regexp.MustCompile(`<source src="(?s:(.*?))" type="`)
 	dlAddr := regAddr.FindAllStringSubmatch(htmlText, 1)
@@ -171,7 +173,7 @@ func PageCrawlOne(dstUrl, proxyUrl string) (vi VideoInfo, err error) {
 		chromedp.Flag("blink-settings", "imagesEnabled=false"),
 		chromedp.ProxyServer(proxyUrl),
 		//chromedp.Flag("headless", false),
-		//chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3830.0 Safari/537.36"),
+		chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"),
 	}
 	options = append(chromedp.DefaultExecAllocatorOptions[:], options...)
 
@@ -209,7 +211,7 @@ func PageCrawl_chromedp(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 		chromedp.Flag("blink-settings", "imagesEnabled=false"),
 		chromedp.ProxyServer(proxyUrl),
 		//chromedp.Flag("headless", false),
-		//chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"),
+		chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"),
 	}
 	options = append(chromedp.DefaultExecAllocatorOptions[:], options...)
 
@@ -222,8 +224,10 @@ func PageCrawl_chromedp(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 	sel := "#wrapper"
 	htmlText := ""
 	if err := chromedp.Run(ctx, nopCrawHtml(dstUrl, sel, &htmlText)); err != nil {
-		fmt.Println(err)
+		fmt.Println("Crawl", dstUrl, err)
 		return
+	} else {
+		fmt.Println(dstUrl, "Crawl done!")
 	}
 
 	doc, err := goquery.NewDocumentFromReader(bytes.NewBufferString(htmlText))
