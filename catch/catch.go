@@ -284,7 +284,13 @@ func PageCrawl_chromedp(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 			if len(strs) > 0 {
 				vi.Collect, _ = strconv.Atoi(strs[0])
 			}
-			vi.Owner = strings.Fields(owner[0][1])[0]
+
+			if len(strings.Fields(owner[0][1])) > 0 {
+				vi.Owner = strings.Fields(owner[0][1])[0]
+			} else {
+				vi.Owner = "unknown"
+			}
+
 			vMinute := 0
 			vSecond := 0
 			fmt.Sscanf(selection.Find("span.duration").Text(), "%d:%d\n", &vMinute, &vSecond)
