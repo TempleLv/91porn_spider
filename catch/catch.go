@@ -76,8 +76,12 @@ func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
 	htmlText := ""
 	fullUrl := "https://www.91porn.com/view_video.php?viewkey=" + v.ViewKey
 	if err = chromedp.Run(ctx, sourHtml(fullUrl, "#player_one_html5_api > source", &htmlText)); err != nil {
-		fmt.Println("DlAddr", fullUrl, err)
-		return
+		if err = chromedp.Run(ctx, sourHtml_click(fullUrl, "#player_one_html5_api > source", &htmlText)); err != nil {
+			fmt.Println("DlAddr", fullUrl, err)
+			return
+		} else {
+			fmt.Println(fullUrl, "DlAddr done!")
+		}
 	} else {
 		fmt.Println(fullUrl, "DlAddr done!")
 	}
@@ -129,6 +133,23 @@ func sourHtml(urlstr, sel string, html *string) chromedp.Tasks {
 		//chromedp.ActionFunc(func(ctx context.Context) error {
 		//	return nil
 		//}),
+		//chromedp.Click("body > table > tbody > tr > td > a", chromedp.ByQuery),
+		chromedp.OuterHTML(sel, html),
+	}
+}
+
+func sourHtml_click(urlstr, sel string, html *string) chromedp.Tasks {
+	return chromedp.Tasks{
+		network.Enable(),
+		network.SetExtraHTTPHeaders(network.Headers(map[string]interface{}{
+			"Accept-Language": "zh-CN,zh;q=0.9",
+		})),
+		chromedp.Navigate(urlstr),
+		//chromedp.WaitVisible(sel),
+		//chromedp.Text("source src", html),
+		//chromedp.ActionFunc(func(ctx context.Context) error {
+		//	return nil
+		//}),
 		chromedp.Click("body > table > tbody > tr > td > a", chromedp.ByQuery),
 		chromedp.OuterHTML(sel, html),
 	}
@@ -152,6 +173,20 @@ func sourManyHtml(urlstr string, sel, html []string) chromedp.Tasks {
 }
 
 func nopCrawHtml(urlstr string, sel string, html *string) chromedp.Tasks {
+	task := chromedp.Tasks{
+		network.Enable(),
+		network.SetExtraHTTPHeaders(network.Headers(map[string]interface{}{
+			"Accept-Language": "zh-CN,zh;q=0.9",
+		})),
+		chromedp.Navigate(urlstr),
+		//chromedp.Click("body > table > tbody > tr > td > a", chromedp.ByQuery),
+		chromedp.OuterHTML(sel, html),
+	}
+
+	return task
+}
+
+func nopCrawHtml_click(urlstr string, sel string, html *string) chromedp.Tasks {
 	task := chromedp.Tasks{
 		network.Enable(),
 		network.SetExtraHTTPHeaders(network.Headers(map[string]interface{}{
@@ -224,8 +259,12 @@ func PageCrawl_chromedp(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 	sel := "#wrapper"
 	htmlText := ""
 	if err := chromedp.Run(ctx, nopCrawHtml(dstUrl, sel, &htmlText)); err != nil {
-		fmt.Println("Crawl", dstUrl, err)
-		return
+		if err := chromedp.Run(ctx, nopCrawHtml_click(dstUrl, sel, &htmlText)); err != nil {
+			fmt.Println("Crawl", dstUrl, err)
+			return
+		} else {
+			fmt.Println(dstUrl, "Crawl done!")
+		}
 	} else {
 		fmt.Println(dstUrl, "Crawl done!")
 	}
