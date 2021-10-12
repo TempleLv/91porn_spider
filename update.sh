@@ -1,0 +1,2 @@
+git pull
+supervisorctl restart spider91
