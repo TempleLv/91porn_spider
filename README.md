@@ -40,10 +40,10 @@
 3. 新增docker版本  
    https://hub.docker.com/repository/docker/templelv/spider91
 
-```
-docker run --restart=always -it --name spider91 \
--v /dir_to_save/:/root/spider91/save \
-templelv/spider91 sh -c 'service supervisor start && /bin/bash' 
-```
-/dir_to_save为用户设置的视频保存路径  
-容器中执行/root/spider91/update.sh   将更新代码为github上最新并编译重新执行。
+   ```
+   docker run --restart=always -it --name spider91 \
+   -v /dir_to_save/:/root/spider91/save \
+   templelv/spider91 sh -c 'service supervisor start && /bin/bash' 
+   ```
+   /dir_to_save为用户设置的视频保存路径  
+   容器中执行/root/spider91/update.sh   将更新代码为github上最新并编译重新执行。
