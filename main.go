@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/robfig/cron/v3"
+	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"log"
@@ -18,6 +19,10 @@ import (
 	"strings"
 	"time"
 )
+
+type proxyInfo struct {
+	ProxyUrls []string `yaml:"ProxyUrls,flow"`
+}
 
 func weeklyFunc(proxyUrls []string) func() {
 	proxyUrls = append([]string{}, proxyUrls...)
@@ -459,20 +464,15 @@ func main() {
 
 	flag.Parse()
 
-	proxyUrls := []string{
-		//"socks5://127.0.0.1:7890",
-		"socks5://192.168.3.254:1081",
-		"socks5://192.168.3.254:1082",
-		"socks5://192.168.3.254:1083",
-		"socks5://192.168.3.254:1084",
-		"socks5://192.168.3.254:1085",
-		"socks5://192.168.3.254:1086",
-		"socks5://192.168.3.254:1087",
-		"socks5://192.168.3.254:1088",
-		"socks5://192.168.3.254:1089",
-		"socks5://192.168.3.254:1090",
-		"socks5://192.168.3.254:1091",
+	conf := new(proxyInfo)
+	yamlFile, err := ioutil.ReadFile("proxyConfig.yaml")
+	err = yaml.Unmarshal(yamlFile, conf)
+	// err = yaml.Unmarshal(yamlFile, &resultMap)
+	if err != nil {
+		log.Println("can't get proxy config!!!")
 	}
+
+	proxyUrls := conf.ProxyUrls
 
 	if cpage == true {
 		path, _ := filepath.Abs(savePath)
@@ -518,7 +518,7 @@ func main() {
 
 	path, _ := filepath.Abs("./save/")
 
-	_, err := os.Stat(path)
+	_, err = os.Stat(path)
 	if os.IsNotExist(err) {
 		if err = os.MkdirAll(path, os.ModePerm); err != nil {
 			log.Println("log path create failed!", err)
