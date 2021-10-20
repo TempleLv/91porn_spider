@@ -46,4 +46,7 @@
    templelv/spider91 sh -c 'service supervisor start && /bin/bash' 
    ```
    /dir_to_save为用户设置的视频保存路径  
-   容器中执行/root/spider91/update.sh   将更新代码为github上最新并编译重新执行。
+   docker attach spider91 命令可以进入容器终端  
+   容器终端中执行/root/spider91/update.sh   将更新代码为github上最新并编译重新执行。  
+   代理列表通过修改配置文件更新，配置文件路径/root/spider91/proxyConfig.yaml  
+   推荐使用passwall建立多过代理。  
