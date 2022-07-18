@@ -281,7 +281,7 @@ func PageCrawl_chromedp(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 		title := selection.Find("a").Find("span.video-title").Text()
 		videoUrl, urlOk := selection.Find("a").Attr("href")
 
-		regViewKey := regexp.MustCompile(`view_video.php\?viewkey=(?s:(.*))`)
+		regViewKey := regexp.MustCompile(`viewkey=(?s:(.*))`)
 		regAddTime := regexp.MustCompile(`添加时间:(?s:(.*?))\n`)
 		regWatch := regexp.MustCompile(`查看:(?s:(.*?))\n`)
 		regCollect := regexp.MustCompile(`收藏:(?s:(.*?))\n`)
