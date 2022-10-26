@@ -281,11 +281,11 @@ func PageCrawl_chromedp(dstUrl, proxyUrl string) (viAll []*VideoInfo) {
 		title := selection.Find("a").Find("span.video-title").Text()
 		videoUrl, urlOk := selection.Find("a").Attr("href")
 
-		regViewKey := regexp.MustCompile(`viewkey=(?s:(.*))`)
+		regViewKey := regexp.MustCompile(`viewkey=(?s:(.*))&page`)
 		regAddTime := regexp.MustCompile(`添加时间:(?s:(.*?))\n`)
-		regWatch := regexp.MustCompile(`查看:(?s:(.*?))\n`)
+		regWatch := regexp.MustCompile(`热度:(?s:(.*?))\n`)
 		regCollect := regexp.MustCompile(`收藏:(?s:(.*?))\n`)
-		regOwner := regexp.MustCompile(`作者:(?s:(.*?))查看:`)
+		regOwner := regexp.MustCompile(`作者: \n(?s:(.*?))\n`)
 
 		viewkey := regViewKey.FindAllStringSubmatch(videoUrl, 1)
 		addTime := regAddTime.FindAllStringSubmatch(textStr, 1)
