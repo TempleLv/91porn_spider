@@ -465,7 +465,10 @@ func main() {
 	flag.Parse()
 
 	conf := new(proxyInfo)
-	yamlFile, err := ioutil.ReadFile("proxyConfig.yaml")
+	yamlFile, err := ioutil.ReadFile("./save/proxyConfig.yaml")
+	if err != nil {
+		yamlFile, err = ioutil.ReadFile("proxyConfig.yaml")
+	}
 	err = yaml.Unmarshal(yamlFile, conf)
 	// err = yaml.Unmarshal(yamlFile, &resultMap)
 	if err != nil {

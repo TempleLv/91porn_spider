@@ -19,7 +19,10 @@ type MailInfo struct {
 func SendMailByYaml(subject, content, mailtype string) error {
 
 	conf := new(MailInfo)
-	yamlFile, err := ioutil.ReadFile("mailConfig.yaml")
+	yamlFile, err := ioutil.ReadFile("./save/mailConfig.yaml")
+	if err != nil {
+		yamlFile, err = ioutil.ReadFile("mailConfig.yaml")
+	}
 	err = yaml.Unmarshal(yamlFile, conf)
 	// err = yaml.Unmarshal(yamlFile, &resultMap)
 	if err != nil {
