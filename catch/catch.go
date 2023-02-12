@@ -503,11 +503,11 @@ func DownloadMany(viAll []*VideoInfo, numThread int, proxyUrl, savePath string) 
 	chq := make(chan int, numThread)
 	fmt.Print("DownladMany:len([]*VideoInfo)=", len(viAll), "\n")
 	var mutex sync.Mutex
-	for _, vi := range viAll {
+	for i, vi := range viAll {
 		go func(info *VideoInfo) {
 			chq <- 1
 			info.updateDlAddr(proxyUrl)
-			savePath := filepath.Join(savePath, fmt.Sprintf("%s(%s).ts", info.Title, info.Owner))
+			savePath := filepath.Join(savePath, fmt.Sprintf("%s(%s)_%d.ts", info.Title, info.Owner, i))
 			err := info.Download(savePath, 15, proxyUrl)
 			if err != nil {
 				mutex.Lock()
