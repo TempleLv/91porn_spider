@@ -205,10 +205,10 @@ func PageCrawlOne(dstUrl, proxyUrl string) (vi VideoInfo, err error) {
 	options := []chromedp.ExecAllocatorOption{
 		chromedp.Flag("hide-scrollbars", false),
 		chromedp.Flag("mute-audio", false),
-		chromedp.Flag("blink-settings", "imagesEnabled=false"),
+		chromedp.Flag("blink-settings", "imagesEnabled=true"),
 		chromedp.ProxyServer(proxyUrl),
-		//chromedp.Flag("headless", false),
-		chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"),
+		chromedp.Flag("headless", false),
+		chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0"),
 	}
 	options = append(chromedp.DefaultExecAllocatorOptions[:], options...)
 
@@ -216,9 +216,9 @@ func PageCrawlOne(dstUrl, proxyUrl string) (vi VideoInfo, err error) {
 	defer cancel()
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
-	ctx, _ = context.WithTimeout(ctx, time.Second*25)
+	ctx, _ = context.WithTimeout(ctx, time.Second*250)
 
-	sels := [...]string{"#player_one_html5_api > source", "#videodetails > h4", "#videodetails-content > div:nth-child(3) > span.title-yakov > a:nth-child(1) > span"}
+	sels := [...]string{"#player_one_html5_api > source", "#videodetails > h4", "#videodetails-content > div:nth-child(2) > a"}
 	htmlText := [len(sels)]string{}
 	if err = chromedp.Run(ctx, sourManyHtml(dstUrl, sels[:], htmlText[:])); err != nil {
 		fmt.Println(err)
