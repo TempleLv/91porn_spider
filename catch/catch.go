@@ -216,7 +216,7 @@ func PageCrawlOne(dstUrl, proxyUrl string) (vi VideoInfo, err error) {
 	defer cancel()
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
-	ctx, _ = context.WithTimeout(ctx, time.Second*250)
+	ctx, _ = context.WithTimeout(ctx, time.Second*25)
 
 	sels := [...]string{"#player_one_html5_api > source", "#videodetails > h4", "#videodetails-content > div:nth-child(2) > a"}
 	htmlText := [len(sels)]string{}
