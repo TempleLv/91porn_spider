@@ -89,6 +89,7 @@ func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
 	dlAddr := regAddr.FindAllStringSubmatch(htmlText, 1)
 	if len(dlAddr) > 0 {
 		v.DlAddr = dlAddr[0][1]
+		v.DlAddr = strings.ReplaceAll(v.DlAddr, "&amp;", "&")
 	}
 
 	return
@@ -103,10 +104,10 @@ func (v VideoInfo) Download(savePath string, numThread int, proxy string) (err e
 		cmd := exec.CommandContext(ctx, "m3_dl", "-p", proxy, "-t", strconv.Itoa(numThread), "-w", "-o", savePath, v.DlAddr)
 
 		//cmd := exec.Command("m3_dl", "-p", proxy, "-t", strconv.Itoa(numThread), "-w", "-o", savePath, v.DlAddr)
-		fmt.Println(cmd)
+		//fmt.Println(cmd)
 		out, ierr := cmd.CombinedOutput()
 		if ierr != nil {
-			fmt.Println(string(out))
+			//fmt.Println(string(out))
 			_ = out
 			err = ierr
 			fmt.Println(v.Title, "download fail!")
@@ -232,6 +233,8 @@ func PageCrawlOne(dstUrl, proxyUrl string) (vi VideoInfo, err error) {
 	owner := regOwner.FindAllStringSubmatch(htmlText[2], 1)
 	if len(dlAddr) > 0 && len(title) > 0 && len(owner) > 0 {
 		vi.DlAddr = dlAddr[0][1]
+		//将vi.DlAddr中的&amp;转换为&
+		vi.DlAddr = strings.ReplaceAll(vi.DlAddr, "&amp;", "&")
 		//去掉title[0][1]中的空格和换行符
 		vi.Title = strings.ReplaceAll(title[0][1], " ", "")
 		vi.Title = strings.ReplaceAll(vi.Title, "\n", "")
