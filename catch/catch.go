@@ -104,7 +104,7 @@ func (v VideoInfo) Download(savePath string, numThread int, proxy string) (err e
 		cmd := exec.CommandContext(ctx, "m3_dl", "-p", proxy, "-t", strconv.Itoa(numThread), "-w", "-o", savePath, v.DlAddr)
 
 		//cmd := exec.Command("m3_dl", "-p", proxy, "-t", strconv.Itoa(numThread), "-w", "-o", savePath, v.DlAddr)
-		//fmt.Println(cmd)
+		fmt.Println(cmd)
 		out, ierr := cmd.CombinedOutput()
 		if ierr != nil {
 			//fmt.Println(string(out))
