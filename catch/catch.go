@@ -101,10 +101,10 @@ func (v VideoInfo) Download(savePath string, numThread int, proxy string) (err e
 		//strCmd := fmt.Sprintf(" -p \"%s\" -t %d -w -o %s \"%s\"", proxy, numThread, savePath, v.DlAddr)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5+time.Second*30)
 		defer cancel()
-		cmd := exec.CommandContext(ctx, "m3_dl", "-p", proxy, "-t", strconv.Itoa(numThread), "-w", "-o", savePath, v.DlAddr)
+		cmd := exec.CommandContext(ctx, "curl", "-x", proxy, "-o", savePath, "-O", v.DlAddr)
 
 		//cmd := exec.Command("m3_dl", "-p", proxy, "-t", strconv.Itoa(numThread), "-w", "-o", savePath, v.DlAddr)
-		fmt.Println(cmd)
+		//fmt.Println(cmd)
 		out, ierr := cmd.CombinedOutput()
 		if ierr != nil {
 			//fmt.Println(string(out))
@@ -226,7 +226,7 @@ func PageCrawlOne(dstUrl, proxyUrl string) (vi VideoInfo, err error) {
 		return
 	}
 	regAddr := regexp.MustCompile(`<source src="(?s:(.*?))" type="`)
-	regTitle := regexp.MustCompile(`">(?s:(.*?))</h4>`)
+	regTitle := regexp.MustCompile(`.*">(?s:(.*?))</h4>`)
 	regOwner := regexp.MustCompile(`">(?s:(.*?))</span>`)
 	dlAddr := regAddr.FindAllStringSubmatch(htmlText[0], 1)
 	title := regTitle.FindAllStringSubmatch(htmlText[1], 1)
@@ -512,7 +512,7 @@ func DownloadMany(viAll []*VideoInfo, numThread int, proxyUrl, savePath string) 
 		go func(info *VideoInfo, cnt int) {
 			chq <- 1
 			info.updateDlAddr(proxyUrl)
-			savePath := filepath.Join(savePath, fmt.Sprintf("%s(%s)_%d.ts", info.Title, info.Owner, cnt))
+			savePath := filepath.Join(savePath, fmt.Sprintf("%s(%s)_%d.mp4", info.Title, info.Owner, cnt))
 			err := info.Download(savePath, 15, proxyUrl)
 			if err != nil {
 				mutex.Lock()

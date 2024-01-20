@@ -490,8 +490,8 @@ func main() {
 
 			vi, err := catch.PageCrawlOne(pageUrl, proxyUrl)
 			if err == nil {
-				fmt.Println("Crawled one page, DownLoading", fmt.Sprintf("%s(%s).ts", vi.Title, vi.Owner))
-				savePath := filepath.Join(path, fmt.Sprintf("%s(%s).ts", vi.Title, vi.Owner))
+				fmt.Println("Crawled one page, DownLoading", fmt.Sprintf("%s(%s).mp4", vi.Title, vi.Owner))
+				savePath := filepath.Join(path, fmt.Sprintf("%s(%s).mp4", vi.Title, vi.Owner))
 				vi.Download(savePath, threadNum, proxyUrl)
 			}
 
