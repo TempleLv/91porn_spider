@@ -63,7 +63,7 @@ func (v *VideoInfo) updateDlAddr(proxy string) (err error) {
 		chromedp.Flag("blink-settings", "imagesEnabled=false"),
 		chromedp.ProxyServer(proxy),
 		//chromedp.Flag("headless", false),
-		chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"),
+		chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0"),
 	}
 	options = append(chromedp.DefaultExecAllocatorOptions[:], options...)
 
@@ -103,10 +103,10 @@ func (v VideoInfo) Download(savePath string, numThread int, proxy string) (err e
 		cmd := exec.CommandContext(ctx, "m3_dl", "-p", proxy, "-t", strconv.Itoa(numThread), "-w", "-o", savePath, v.DlAddr)
 
 		//cmd := exec.Command("m3_dl", "-p", proxy, "-t", strconv.Itoa(numThread), "-w", "-o", savePath, v.DlAddr)
-		//fmt.Println(cmd)
+		fmt.Println(cmd)
 		out, ierr := cmd.CombinedOutput()
 		if ierr != nil {
-			//fmt.Println(string(out))
+			fmt.Println(string(out))
 			_ = out
 			err = ierr
 			fmt.Println(v.Title, "download fail!")
