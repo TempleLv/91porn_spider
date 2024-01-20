@@ -225,14 +225,16 @@ func PageCrawlOne(dstUrl, proxyUrl string) (vi VideoInfo, err error) {
 		return
 	}
 	regAddr := regexp.MustCompile(`<source src="(?s:(.*?))" type="`)
-	regTitle := regexp.MustCompile(`<h4 class="login_register_header" align="left">(?s:(.*?))\n`)
-	regOwner := regexp.MustCompile(`<span class="title">(?s:(.*?))</span>`)
+	regTitle := regexp.MustCompile(`<h4 class="login_register_header" align="left">(?s:(.*?))</h4>`)
+	regOwner := regexp.MustCompile(`viewtype=basic">(?s:(.*?))</a>`)
 	dlAddr := regAddr.FindAllStringSubmatch(htmlText[0], 1)
 	title := regTitle.FindAllStringSubmatch(htmlText[1], 1)
 	owner := regOwner.FindAllStringSubmatch(htmlText[2], 1)
 	if len(dlAddr) > 0 && len(title) > 0 && len(owner) > 0 {
 		vi.DlAddr = dlAddr[0][1]
-		vi.Title = strings.TrimSpace(title[0][1])
+		//去掉title[0][1]中的空格和换行符
+		vi.Title = strings.ReplaceAll(title[0][1], " ", "")
+		vi.Title = strings.ReplaceAll(vi.Title, "\n", "")
 		vi.Owner = owner[0][1]
 	}
 
