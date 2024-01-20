@@ -208,7 +208,7 @@ func PageCrawlOne(dstUrl, proxyUrl string) (vi VideoInfo, err error) {
 		chromedp.Flag("mute-audio", false),
 		chromedp.Flag("blink-settings", "imagesEnabled=true"),
 		chromedp.ProxyServer(proxyUrl),
-		//chromedp.Flag("headless", false),
+		chromedp.Flag("headless", false),
 		chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0"),
 	}
 	options = append(chromedp.DefaultExecAllocatorOptions[:], options...)
@@ -219,15 +219,15 @@ func PageCrawlOne(dstUrl, proxyUrl string) (vi VideoInfo, err error) {
 	defer cancel()
 	ctx, _ = context.WithTimeout(ctx, time.Second*25)
 
-	sels := [...]string{"#player_one_html5_api > source", "#videodetails > h4", "#videodetails-content > div:nth-child(2) > a"}
+	sels := [...]string{"#player_one_html5_api > source", "#videodetails > h4", "#videodetails-content > div:nth-child(2) > span.title-yakov > a:nth-child(1) > span"}
 	htmlText := [len(sels)]string{}
 	if err = chromedp.Run(ctx, sourManyHtml(dstUrl, sels[:], htmlText[:])); err != nil {
 		fmt.Println(err)
 		return
 	}
 	regAddr := regexp.MustCompile(`<source src="(?s:(.*?))" type="`)
-	regTitle := regexp.MustCompile(`<h4 class="login_register_header" align="left">(?s:(.*?))</h4>`)
-	regOwner := regexp.MustCompile(`viewtype=basic">(?s:(.*?))</a>`)
+	regTitle := regexp.MustCompile(`">(?s:(.*?))</h4>`)
+	regOwner := regexp.MustCompile(`">(?s:(.*?))</span>`)
 	dlAddr := regAddr.FindAllStringSubmatch(htmlText[0], 1)
 	title := regTitle.FindAllStringSubmatch(htmlText[1], 1)
 	owner := regOwner.FindAllStringSubmatch(htmlText[2], 1)
